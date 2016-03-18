@@ -1,0 +1,6 @@
+*.Rproj*
+.Rhistory
+.RData
+README.html
+invert.png
+privatekey.txt
