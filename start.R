@@ -1,5 +1,6 @@
 library(rjson)
 library(tidyr)
+library(dplyr)
 library(ggmap)
 library(png)
 
@@ -22,10 +23,11 @@ treeMap <- lapply(raw$item, function(i) {
   c(i$lat, i$lng, i$stumpdiameter, address$address$Match_addr)
   })
 treeMap.raw <- treeMap
-treeMap <- data.frame(matrix(unlist(treeMap), ncol = 4, byrow = TRUE))
-treeMap$X4 <- gsub(", New York, New York", "", treeMap$X4)
-#tidy
-names(treeMap) <- c("lat", "lon", "stumpDiam")
+treeMap <- data.frame(matrix(unlist(treeMap.raw), ncol = 4, byrow = TRUE))
+treeMap$X4 <- gsub(", (New York|Knickerbocker), New York", "", treeMap$X4)
+treeMap <- treeMap %>% separate(col = X4, into = c("address", "zip"), sep = ", ") %>% 
+                    separate(col = address, into = c("number", "street"), extra = "merge")
+names(treeMap)[1:3] <- c("lat", "lon", "stumpDiam")
 
 mymap <- get_map(location = "40.72017399459069,-73.98639034958494", zoom = 15, 
                    maptype = "toner-lines")
