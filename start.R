@@ -1,5 +1,5 @@
 library(rjson)
-library(plyr)
+library(tidyr)
 library(ggmap)
 library(png)
 
@@ -15,8 +15,16 @@ url <- paste("https://tree-map.nycgovparks.org/points",
               "undefined", "1", "2000", sep = "/")
 raw <- fromJSON(file = url)
 
-treeMap <- lapply(raw$item, function(i) c(i$ lat, i$lng, i$stumpdiameter))
-treeMap <- data.frame(matrix(unlist(treeMap), ncol = 3, byrow = TRUE))
+gisUrl <- paste0("http://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer/",
+                 "reverseGeocode?f=json&location=")
+treeMap <- lapply(raw$item, function(i) {
+  address <- fromJSON(file = paste0(gisUrl, i$lng, ",", i$lat))
+  c(i$lat, i$lng, i$stumpdiameter, address$address$Match_addr)
+  })
+treeMap.raw <- treeMap
+treeMap <- data.frame(matrix(unlist(treeMap), ncol = 4, byrow = TRUE))
+treeMap$X4 <- gsub(", New York, New York", "", treeMap$X4)
+#tidy
 names(treeMap) <- c("lat", "lon", "stumpDiam")
 
 mymap <- get_map(location = "40.72017399459069,-73.98639034958494", zoom = 15, 
@@ -28,19 +36,10 @@ g <- ggmap(mymap) +
                 alpha = 0.45) +
      scale_size(range = c(1, 3)) +
      theme_nothing() +
-     scale_color_continuous(low = "chartreuse", high = "chartreuse4") + 
-     geom_point(data = data.frame(x = c(from.lon, to.lon, lon), y = c(from.lat, to.lat, lat)), 
-                aes(x = x, y = y),
-             color = "blue", size = 2)
+     scale_color_continuous(low = "chartreuse", high = "chartreuse4")
 
-# via <- paste0("http://router.project-osrm.org/viaroute?hl=en&loc=",
-#               from.lat, ",", from.lon, "&loc=", to.lat, ",", to.lon)
-# http://router.project-osrm.org/viaroute?hl=en&loc=40.7181264,-73.988733&loc=40.7193574,-73.9881134
-# http://router.project-osrm.org/viaroute?hl=en&loc=-73.9859247,40.7193534&loc=-73.9865443,40.7181224
-# 
-# http://services.gisgraphy.com/reversegeocoding/search?format=json&lat=48.8723789988&lng=2.2996401787
-url <- paste0("http://geocoding.geo.census.gov/geocoder/locations/address?",
-               "street=100+suffolk+st&city=new+york&state=NY&benchmark=9&format=json")
+# url <- paste0("http://geocoding.geo.census.gov/geocoder/locations/address?",
+#                "street=100+suffolk+st&city=new+york&state=NY&benchmark=9&format=json")
 # use from and to address to store "blocks" in a lookup table. if the street number falls within 
 # a matched block, perform lookup. else make api call, and add to lookup table and increment 
 # new block by 1.
