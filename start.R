@@ -45,31 +45,51 @@ treeMap$number <- as.numeric(treeMap$number)
 # 943 unique addresses on 48 streets
 
 # build block table
-blocks <- data.frame(id = NULL, start = NULL, end = NULL, street = NULL, zip = NULL)
-blocks <- data.frame(id = 1, start = 222, end = 276, street = "Elizabeth St", zip = "10012", 
-                     count = 0, stringsAsFactors = FALSE)
 url.main <- "http://geocoding.geo.census.gov/geocoder/locations/address?"
-#for (i in 1 : nrow(treeMap)) {
-for (i in 1 : 5) {
+blocks <- data.frame(id = 1, start = 222, end = 276, street = "Elizabeth St", cross1 = "Prince St",
+                       cross2 = "E Houston St", zip = "10012", count = 0, stringsAsFactors = FALSE)
+for (i in 1 : nrow(treeMap)) {
   x <- inner_join(treeMap[i, ], blocks, by = c("street" = "street", "zip" = "zip"))
   if (nrow(x) > 0) {
     if (findInterval(x$number, c(x$start, x$end))) {
       blocks[x$id, "count"] <- blocks[x$id, "count"] + 1
+    } else {
+      blocks <- rbind(blocks,  addBlock(treeMap[i, ]))
     }
   }
   else{
-    url.parms <- paste0("street=", treeMap[i, "number"], "+", 
-                        gsub(" ", "+", treeMap[i, "street"]), "&zip=", treeMap[i, "zip"], 
-                        "&city=new+york&state=NY&benchmark=9&format=json")
-    result <- fromJSON(file = paste0(url.main, url.parms))
-    from <- as.numeric(result$result$addressMatches[[1]]$addressComponents$fromAddress)
-    to <- as.numeric(result$result$addressMatches[[1]]$addressComponents$toAddress)
-    # side <- result$result$addressMatches[[1]]$tigerLine$side
-    tmp <- data.frame(id = nrow(blocks) + 1, start = min(from, to), end = max(from, to), 
-                      street = treeMap[i, "street"], zip = treeMap[i, "zip"], count = 1, 
-                      stringsAsFactors = FALSE)
-    blocks <- rbind(blocks, tmp)
+    blocks <- rbind(blocks,  addBlock(treeMap[i, ]))
   } 
 }
   
-  
+
+addBlock <- function(tree) {
+  url.parms <- paste0("street=", tree$number, "+", 
+                      gsub(" ", "+", tree$street), "&zip=", tree$zip, 
+                      "&city=new+york&state=NY&benchmark=9&format=json")
+  result <- fromJSON(file = paste0(url.main, url.parms))
+  from <- as.numeric(result$result$addressMatches[[1]]$addressComponents$fromAddress)
+  to <- as.numeric(result$result$addressMatches[[1]]$addressComponents$toAddress)
+  # side <- result$result$addressMatches[[1]]$tigerLine$side
+  from.parms <- paste0("street=", from, "+", 
+                       gsub(" ", "+", tree$street), "&zip=", tree$zip, 
+                       "&city=new+york&state=NY&benchmark=9&format=json")
+  to.parms <- paste0("street=", to, "+", 
+                     gsub(" ", "+", tree$street), "&zip=", tree$zip, 
+                     "&city=new+york&state=NY&benchmark=9&format=json")
+  fromCoord <- fromJSON(file = paste0(url.main, from.parms))
+  toCoord <- fromJSON(file = paste0(url.main, to.parms))
+  fromInt <- fromJSON(file = paste0(gisUrl, fromCoord$result$addressMatches[[1]]$coordinates$x, 
+                                    ",", fromCoord$result$addressMatches[[1]]$coordinates$y,
+                                    "&returnIntersection=true"))
+  toInt <- fromJSON(file = paste0(gisUrl, toCoord$result$addressMatches[[1]]$coordinates$x, 
+                                  ",", toCoord$result$addressMatches[[1]]$coordinates$y,
+                                  "&returnIntersection=true"))
+  fromCross <- gsub(paste0(tree$street, " & "), "", fromInt$address$Address)
+  toCross <- gsub(paste0(tree$street, " & "), "", toInt$address$Address)
+  tmp <- data.frame(id = nrow(blocks) + 1, start = min(from, to), end = max(from, to), 
+                    street = tree$street, cross1 = fromCross,cross2 = toCross,
+                    zip = tree$zip, count = 1, 
+                    stringsAsFactors = FALSE)
+  tmp
+}
