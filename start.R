@@ -16,6 +16,7 @@ url <- paste("https://tree-map.nycgovparks.org/points",
               "undefined", "1", "2000", sep = "/")
 raw <- fromJSON(file = url)
 
+# Documentation developers.arcgis.com/rest/geocode/api-reference/geocoding-reverse-geocode.htm
 gisUrl <- paste0("http://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer/",
                  "reverseGeocode?f=json&location=")
 treeMap <- lapply(raw$item, function(i) {
@@ -45,14 +46,17 @@ treeMap$number <- as.numeric(treeMap$number)
 # 943 unique addresses on 48 streets
 
 # build block table
+# Documentation http://geocoding.geo.census.gov/geocoder/Geocoding_Services_API.html
 url.main <- "http://geocoding.geo.census.gov/geocoder/locations/address?"
 blocks <- data.frame(id = 1, start = 222, end = 276, street = "Elizabeth St", cross1 = "Prince St",
                        cross2 = "E Houston St", zip = "10012", count = 0, stringsAsFactors = FALSE)
 for (i in 1 : nrow(treeMap)) {
   x <- inner_join(treeMap[i, ], blocks, by = c("street" = "street", "zip" = "zip"))
   if (nrow(x) > 0) {
-    if (findInterval(x$number, c(x$start, x$end))) {
-      blocks[x$id, "count"] <- blocks[x$id, "count"] + 1
+    y <- x$start <= unique(x$number) & x$end >= unique(x$number)
+    if (sum(y)) {
+      # Taking only first match, not differentiating between sides of street
+      blocks[x[which(y)[1], "id"], "count"] <- blocks[x[which(y)[1], "id"], "count"] + 1
     } else {
       blocks <- rbind(blocks,  addBlock(treeMap[i, ]))
     }
@@ -64,6 +68,7 @@ for (i in 1 : nrow(treeMap)) {
   
 
 addBlock <- function(tree) {
+  tryCatch({
   url.parms <- paste0("street=", tree$number, "+", 
                       gsub(" ", "+", tree$street), "&zip=", tree$zip, 
                       "&city=new+york&state=NY&benchmark=9&format=json")
@@ -85,11 +90,27 @@ addBlock <- function(tree) {
   toInt <- fromJSON(file = paste0(gisUrl, toCoord$result$addressMatches[[1]]$coordinates$x, 
                                   ",", toCoord$result$addressMatches[[1]]$coordinates$y,
                                   "&returnIntersection=true"))
-  fromCross <- gsub(paste0(tree$street, " & "), "", fromInt$address$Address)
-  toCross <- gsub(paste0(tree$street, " & "), "", toInt$address$Address)
+  fromCross <- gsub(tree$street, "", fromInt$address$Address)
+  toCross <- gsub(ree$street, "", toInt$address$Address)
   tmp <- data.frame(id = nrow(blocks) + 1, start = min(from, to), end = max(from, to), 
                     street = tree$street, cross1 = fromCross,cross2 = toCross,
                     zip = tree$zip, count = 1, 
                     stringsAsFactors = FALSE)
   tmp
+  },
+  error = function(e) {
+    err <<- rbind(err, tree)
+    errDF <- data.frame(id = as.numeric(row.names(tree)), start = NA, end = NA, 
+                      street = NA, cross1 = NA,cross2 = NA, zip = NA, count = 1, 
+                      stringsAsFactors = FALSE)
+    errDF
+  })
+}
+
+blocks$cross1 <- gsub(" & ", "", blocks$cross1)
+blocks$cross2 <- gsub(" & ", "", blocks$cross2)
+
+for (i in 1 : nrow(blocks)){
+  blocks[i, "cross1"] <- gsub(paste0(" & ", blocks[i, "street"]), "", blocks[i, "cross1"])
+  blocks[i, "cross2"] <- gsub(paste0(" & ", blocks[i, "street"]), "", blocks[i, "cross2"])
 }
