@@ -4,6 +4,37 @@ library(dplyr)
 library(ggmap)
 library(png)
 
+addBlock <- function(tree) {
+  url.parms <- paste0("street=", tree$number, "+", 
+                      gsub(" ", "+", tree$street), "&zip=", tree$zip, 
+                      "&city=new+york&state=NY&benchmark=9&format=json")
+  result <- fromJSON(file = paste0(url.main, url.parms))
+  from <- as.numeric(result$result$addressMatches[[1]]$addressComponents$fromAddress)
+  to <- as.numeric(result$result$addressMatches[[1]]$addressComponents$toAddress)
+  # side <- result$result$addressMatches[[1]]$tigerLine$side
+  from.parms <- paste0("street=", from, "+", 
+                       gsub(" ", "+", tree$street), "&zip=", tree$zip, 
+                       "&city=new+york&state=NY&benchmark=9&format=json")
+  to.parms <- paste0("street=", to, "+", 
+                     gsub(" ", "+", tree$street), "&zip=", tree$zip, 
+                     "&city=new+york&state=NY&benchmark=9&format=json")
+  fromCoord <- fromJSON(file = paste0(url.main, from.parms))
+  toCoord <- fromJSON(file = paste0(url.main, to.parms))
+  fromInt <- fromJSON(file = paste0(gisUrl, fromCoord$result$addressMatches[[1]]$coordinates$x, 
+                                    ",", fromCoord$result$addressMatches[[1]]$coordinates$y,
+                                    "&returnIntersection=true"))
+  toInt <- fromJSON(file = paste0(gisUrl, toCoord$result$addressMatches[[1]]$coordinates$x, 
+                                  ",", toCoord$result$addressMatches[[1]]$coordinates$y,
+                                  "&returnIntersection=true"))
+  fromCross <- gsub(tree$street, "", fromInt$address$Address)
+  toCross <- gsub(ree$street, "", toInt$address$Address)
+  tmp <- data.frame(id = nrow(blocks) + 1, start = min(from, to), end = max(from, to), 
+                    street = tree$street, cross1 = fromCross,cross2 = toCross,
+                    zip = tree$zip, count = 1, 
+                    stringsAsFactors = FALSE)
+  tmp
+}
+
 # This roughly describes an MBB between the Manhattan bridge and 8th and D.
 border.corner.sw.lat <- "40.71455760597046"
 border.corner.sw.long <- "-73.99566650390625"
@@ -65,52 +96,43 @@ for (i in 1 : nrow(treeMap)) {
     blocks <- rbind(blocks,  addBlock(treeMap[i, ]))
   } 
 }
-  
-
-addBlock <- function(tree) {
-  tryCatch({
-  url.parms <- paste0("street=", tree$number, "+", 
-                      gsub(" ", "+", tree$street), "&zip=", tree$zip, 
-                      "&city=new+york&state=NY&benchmark=9&format=json")
-  result <- fromJSON(file = paste0(url.main, url.parms))
-  from <- as.numeric(result$result$addressMatches[[1]]$addressComponents$fromAddress)
-  to <- as.numeric(result$result$addressMatches[[1]]$addressComponents$toAddress)
-  # side <- result$result$addressMatches[[1]]$tigerLine$side
-  from.parms <- paste0("street=", from, "+", 
-                       gsub(" ", "+", tree$street), "&zip=", tree$zip, 
-                       "&city=new+york&state=NY&benchmark=9&format=json")
-  to.parms <- paste0("street=", to, "+", 
-                     gsub(" ", "+", tree$street), "&zip=", tree$zip, 
-                     "&city=new+york&state=NY&benchmark=9&format=json")
-  fromCoord <- fromJSON(file = paste0(url.main, from.parms))
-  toCoord <- fromJSON(file = paste0(url.main, to.parms))
-  fromInt <- fromJSON(file = paste0(gisUrl, fromCoord$result$addressMatches[[1]]$coordinates$x, 
-                                    ",", fromCoord$result$addressMatches[[1]]$coordinates$y,
-                                    "&returnIntersection=true"))
-  toInt <- fromJSON(file = paste0(gisUrl, toCoord$result$addressMatches[[1]]$coordinates$x, 
-                                  ",", toCoord$result$addressMatches[[1]]$coordinates$y,
-                                  "&returnIntersection=true"))
-  fromCross <- gsub(tree$street, "", fromInt$address$Address)
-  toCross <- gsub(ree$street, "", toInt$address$Address)
-  tmp <- data.frame(id = nrow(blocks) + 1, start = min(from, to), end = max(from, to), 
-                    street = tree$street, cross1 = fromCross,cross2 = toCross,
-                    zip = tree$zip, count = 1, 
-                    stringsAsFactors = FALSE)
-  tmp
-  },
-  error = function(e) {
-    err <<- rbind(err, tree)
-    errDF <- data.frame(id = as.numeric(row.names(tree)), start = NA, end = NA, 
-                      street = NA, cross1 = NA,cross2 = NA, zip = NA, count = 1, 
-                      stringsAsFactors = FALSE)
-    errDF
-  })
-}
 
 blocks$cross1 <- gsub(" & ", "", blocks$cross1)
 blocks$cross2 <- gsub(" & ", "", blocks$cross2)
 
-for (i in 1 : nrow(blocks)){
-  blocks[i, "cross1"] <- gsub(paste0(" & ", blocks[i, "street"]), "", blocks[i, "cross1"])
-  blocks[i, "cross2"] <- gsub(paste0(" & ", blocks[i, "street"]), "", blocks[i, "cross2"])
-}
+# Collapse both street sides into single segment
+s <- blocks %>% group_by(street, cross1, cross2, zip) %>% summarize(sides = n(),total = sum(count))
+s <- as.data.frame(s) 
+
+# Manual cross-street correction
+s[is.na(s$street), c("street", "cross1", "cross2", "zip")] <- "NA"
+s[s$cross2 == "E Houston St & Avenue D", "cross2"] <- "Avenue D"
+s[s$cross2 == "Stanton St & Pitt St", "cross2"] <- "Grand St"
+s[s$cross2 == "E Houston St & Ludlow St", "cross2"] <- "Avenue A"
+s[s$cross2 == "Delancey St S & Baruch Dr", "cross2"] <-  "Stanton St"
+# instances where cross1 == cross2
+s[s$cross2 == "Clinton St" & s$cross1 == "Clinton St",  "cross2"] <-  "Attorney St"
+s[s$cross1 == "E 1st St" & s$cross2 == "E 1st St", "cross1"] <- "E Houston St"
+s[s$cross1 == "Rivington St" & s$cross2 == "Rivington St" & 
+    s$street == "Columbia St", "cross1"] <- "Delancey St"
+s[s$cross1 == "Rivington St" & s$cross2 == "Rivington St" & 
+    s$street == "Chrystie St", "cross1"] <- "Stanton St"
+s[s$cross1 == "Chrystie St" & s$cross2 == "Chrystie St", "cross1"] <- "Bowery"
+s[s$cross1 == "Stanton St" & s$cross2 == "Stanton St", "cross1"] <- "Rivington St"
+s[s$cross1 == "Ridge St" & s$cross2 == "Ridge St" & 
+    s$street == "Broome St", "cross1"] <- "Clinton St"
+s[s$cross1 == "Ridge St" & s$cross2 == "Ridge St" &
+    s$street == "Grand St", c("cross1", "cross2")] <- c("Attorney St", "Pitt St")
+s[s$cross1 == "E 3rd St" & s$cross2 == "E 3rd St", "cross2"] <- "E 4th St"
+s[s$cross1 == "E 4th St" & s$cross2 == "E 4th St", "cross1"] <- "E 3rd St"
+s[s$cross1 == "E 5th St" & s$cross2 == "E 5th St", "cross1"] <- "E 4th St"
+s[s$cross1 == "Spring St" & s$cross2 == "Spring St", "cross2"] <- "Rivington St"
+s[s$cross1 == "Lewis St" & s$cross2 == "Lewis St", "cross1"] <- "Baruch Dr"
+s[s$cross1 == "Mangin St" & s$cross2 == "Mangin St", "cross2"] <- "FDR Dr"
+s[s$cross1 == "Samuel Dickstein Plz" & s$cross2 == "Samuel Dickstein Plz", "cross2"] <- "Grand St"
+# re-agg after fixes; account for mult rows of same segment ie row1$cross1==row2$cross2; comb. zips
+cross1 <- pmin(s$cross1, s$cross2)
+cross2 <- pmax(s$cross1, s$cross2)
+s <- data.frame(street = s$street, cross1, cross2, total = s$total)
+dat <- s %>% group_by(street, cross1, cross2) %>% summarize(total = sum(total)) %>% as.data.frame()
+
