@@ -1,7 +1,8 @@
 *.Rproj*
 .Rhistory
 .RData
-README.html
+*.html
 invert.png
 privatekey.txt
 .Rproj.user
+.DS_Store
