@@ -27,9 +27,22 @@ addBlock <- function(tree) {
                                   ",", toCoord$result$addressMatches[[1]]$coordinates$y,
                                   "&returnIntersection=true"))
   fromCross <- gsub(tree$street, "", fromInt$address$Address)
+  fromCross <- gsub(" & ", "", fromCross)
   toCross <- gsub(tree$street, "", toInt$address$Address)
+  toCross <- gsub(" & ", "", toCross)
+  gis.url.parms1 <- URLencode(paste0(tree$street, " and ", fromCross, ", nyc"))
+  coords.cross1 <- paste0(gis.url.find, "&text=", gis.url.parms1)
+  gis.url.parms2 <- URLencode(paste0(tree$street, " and ", toCross, ", nyc"))
+  coords.cross2 <- paste0(gis.url.find, "&text=", gis.url.parms2)
+  coords.cross1 <- fromJSON(file = coords.cross1)
+  coords.cross2 <- fromJSON(file = coords.cross2)
   tmp <- data.frame(id = nrow(blocks) + 1, start = min(from, to), end = max(from, to), 
-                    street = tree$street, cross1 = fromCross,cross2 = toCross,
+                    street = tree$street, cross1 = fromCross, 
+                    cross1.lat = coords.cross2$locations[[1]]$feature$geometry$y,
+                    cross1.lon = coords.cross2$locations[[1]]$feature$geometry$x,
+                    cross2 = toCross,
+                    cross2.lat = coords.cross2$locations[[1]]$feature$geometry$y,
+                    cross2.lon = coords.cross2$locations[[1]]$feature$geometry$x,
                     zip = tree$zip, count = 1, stringsAsFactors = FALSE)
   tmp
 }
@@ -77,7 +90,7 @@ gis.url <- paste0("http://geocode.arcgis.com/arcgis/rest/services/World/GeocodeS
                  "reverseGeocode?f=json&location=")
 treeMap <- lapply(raw$item, function(i) {
   address <- fromJSON(file = paste0(gis.url, i$lng, ",", i$lat))
-  c(i$lat, i$lng, i$stumpdiameter, address$address$Match_addr)
+  c(i$id, i$lat, i$lng, i$stumpdiameter, address$address$Match_addr)
   })
 
 treeMap.raw <- treeMap
@@ -85,7 +98,7 @@ treeMap <- data.frame(matrix(unlist(treeMap.raw), ncol = 4, byrow = TRUE), strin
 treeMap$X4 <- gsub(", (New York|Knickerbocker), New York", "", treeMap$X4)
 treeMap <- treeMap %>% separate(col = X4, into = c("address", "zip"), sep = ", ") %>% 
                     separate(col = address, into = c("number", "street"), extra = "merge")
-names(treeMap)[1:3] <- c("lat", "lon", "stumpDiam")
+names(treeMap)[1:4] <- c("id", "lat", "lon", "stumpDiam")
 treeMap$stumpDiam <- as.numeric(treeMap$stumpDiam)
 treeMap$number <- as.numeric(treeMap$number)
 
@@ -94,6 +107,7 @@ census.url <- "http://geocoding.geo.census.gov/geocoder/locations/address?"
 # seed block table with correct data types
 blocks <- data.frame(id = 1, start = 222, end = 276, street = "Elizabeth St", cross1 = "Prince St",
                        cross2 = "E Houston St", zip = "10012", count = 0, stringsAsFactors = FALSE)
+treeMap$blockId <- NULL
 for (i in 1 : nrow(treeMap)) {
   x <- inner_join(treeMap[i, ], blocks, by = c("street" = "street", "zip" = "zip"))
   if (nrow(x) > 0) {
@@ -101,12 +115,15 @@ for (i in 1 : nrow(treeMap)) {
     if (sum(y)) {
       # Taking only first match, not differentiating between sides of street
       blocks[x[which(y)[1], "id"], "count"] <- blocks[x[which(y)[1], "id"], "count"] + 1
+      treeMap[i, "blockId"] <-  x[which(y)[1], "id"]
     } else {
       blocks <- rbind(blocks,  addBlock(treeMap[i, ]))
+      treeMap[i, "blockId"] <- max(blocks$id)
     }
   }
   else{
     blocks <- rbind(blocks,  addBlock(treeMap[i, ]))
+    treeMap[i, "blockId"] <- max(blocks$id)
   } 
 }
 
@@ -156,7 +173,7 @@ dat <- s %>% group_by(street, cross1, cross2) %>% summarize(total = sum(total)) 
 dat$distance <- NULL
 err <- NULL
 gis.url.find <- "http://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer/find?f=json"
-for (i in 137:138) {
+for (i in 1:nrow(dat)) {
   tryCatch({
     gis.url.parms1 <- URLencode(paste0(dat[i, "street"], " and ", dat[i, "cross1"], ", nyc"))
     coords.cross1 <- paste0(gis.url.find, "&text=", gis.url.parms1)
@@ -175,6 +192,9 @@ for (i in 137:138) {
   })
 }
 
+dat$tpm <- dat$total / dat$distance
+head(dat[order(dat$tpm, decreasing = T),], 20)
+
 mymap <- get_map(location = "40.72017399459069,-73.98639034958494", zoom = 15, 
                  maptype = "toner-lines")
 inv <- readPNG("invert.png")
@@ -182,6 +202,9 @@ g <- ggmap(mymap) +
   #  inset_raster(inv, xmin = -74.048, xmax = -73.928, ymin = 40.68, ymax = 40.766) +
   geom_point(data = treeMap, aes(x = lon, y = lat, size = stumpDiam, color = stumpDiam), 
              alpha = 0.45) +
-  scale_size(range = c(1, 3)) +
+  scale_size(range = c(3, 5)) +
   theme_nothing() +
   scale_color_continuous(low = "chartreuse", high = "chartreuse4")
+  
+## Map to check validity of points
+
