@@ -1,0 +1,197 @@
+---
+title: "Setup"
+author: "Joe Willage"
+date: "March 23, 2016"
+output: html_document
+---
+
+```{r, echo = FALSE}
+library(ggmap)
+samp <- readRDS("samp.rds")
+treeMap <- readRDS("treeMap.rds")
+blocks <- readRDS("blocks.rds")
+```
+
+Data is pulled from the NYC Street Tree Map site (see sources file). The call takes in diagonal 
+points and creates an MBB using those points as the southwest and northeast corners. The coordinates
+below roughly describe a rectangle between the Manhattan bridge up to 8th and D. This is a 
+reasonable area to start with while everything gets checked out and validated. 
+
+```{r, eval = FALSE}
+border.corner.sw.lat <- "40.71455760597046"
+border.corner.sw.long <- "-73.99566650390625"
+border.corner.ne.lat <- "40.723713744687295"
+border.corner.ne.long <- "-73.97626876831055"
+
+treemap.url <- paste("https://tree-map.nycgovparks.org/points",
+              border.corner.sw.lat, border.corner.sw.long, 
+              border.corner.ne.lat, border.corner.ne.long,
+              "undefined", "1", "2000", sep = "/")
+raw <- fromJSON(file = treemap.url)
+```
+
+The json returned includes the latitude and longitude for each tree in the range, as well as the 
+tree species, trunk diameter, and a few other data points. At this point the data is trimmed down
+from 1976 to a sample of 20 trees. These 20 will be used for validation. 
+
+```{r, eval = FALSE}
+samp <- raw$item[1:20]
+```
+
+```{r}
+samp[[1]]
+```
+
+
+The ArcGIS API is used to reverse geocode each data point. It returns the closest address to each
+tree.  
+
+```{r, eval = FALSE}
+gis.url <- paste0("http://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer/",
+                 "reverseGeocode?f=json&location=")
+treeMap <- lapply(samp, function(i) {
+  address <- fromJSON(file = paste0(gis.url, i$lng, ",", i$lat))
+  c(i$id, i$lat, i$lng, i$stumpdiameter, address$address$Match_addr)
+  })
+
+treeMap <- data.frame(matrix(unlist(treeMap.raw), ncol = 5, byrow = TRUE), stringsAsFactors = FALSE)
+treeMap$X5 <- gsub(", (New York|Knickerbocker), New York", "", treeMap$X5)
+treeMap <- treeMap %>% separate(col = X5, into = c("address", "zip"), sep = ", ") %>% 
+                    separate(col = address, into = c("number", "street"), extra = "merge")
+names(treeMap)[1:4] <- c("id", "lat", "lon", "stumpDiam")
+treeMap$stumpDiam <- as.numeric(treeMap$stumpDiam)
+treeMap$number <- as.numeric(treeMap$number)
+treeMap$lat <- as.numeric(treeMap$lat)
+treeMap$lon <- as.numeric(treeMap$lon)
+```
+
+```{r}
+head(treeMap)
+```
+
+The next thing to do is build a reference table consisting of all the blocks, which are defined 
+as street segments between two adjacent intersecting streets. The Census geocoding services 
+provides start and end addresses for a block. Each tree has it's address looked up in the block 
+table. If there is no row whose address range includes the tree, a new block will be added via the
+add block function. 
+
+```{r eval = FALSE}
+census.url <- "http://geocoding.geo.census.gov/geocoder/locations/address?"
+# seed block table with correct data types
+blocks <- data.frame(id = 1, start = 222, end = 276, street = "Elizabeth St", 
+                     cross1 = "Prince St", cross1.lat = 40.722725, cross1.lon = -73.994156,
+                     cross2 = "E Houston St", cross2.lat = 40.724434, cross2.lon = -73.99346, 
+                     zip = "10012", count = 0, stringsAsFactors = FALSE)
+treeMap$blockId <- NULL
+addBlockErr <- NULL
+for (i in 1 : nrow(treeMap)) {
+  x <- inner_join(treeMap[i, ], blocks, by = c("street" = "street", "zip" = "zip"))
+  if (nrow(x) > 0) {
+    y <- x$start <= unique(x$number) & x$end >= unique(x$number)
+    if (sum(y)) {
+      # Taking only first match, not differentiating between sides of street
+      blocks[x[which(y)[1], "id.y"], "count"] <- blocks[x[which(y)[1], "id.y"], "count"] + 1
+      treeMap[i, "blockId"] <-  x[which(y)[1], "id.y"]
+    } else {
+      blocks <- rbind(blocks,  addBlock(treeMap[i, ]))
+      treeMap[i, "blockId"] <- max(blocks$id)
+    }
+  }
+  else{
+    blocks <- rbind(blocks,  addBlock(treeMap[i, ]))
+    treeMap[i, "blockId"] <- max(blocks$id)
+  } 
+}
+```
+
+```{r, eval = FALSE}
+addBlock <- function(tree) {
+  tryCatch({
+    census.parms <- paste0("street=", tree$number, "+", 
+                        gsub(" ", "+", tree$street), "&zip=", tree$zip, 
+                        "&city=new+york&state=NY&benchmark=9&format=json")
+    result <- fromJSON(file = paste0(census.url, census.parms))
+    from <- as.numeric(result$result$addressMatches[[1]]$addressComponents$fromAddress)
+    to <- as.numeric(result$result$addressMatches[[1]]$addressComponents$toAddress)
+    from.parms <- paste0("street=", from, "+", 
+                         gsub(" ", "+", tree$street), "&zip=", tree$zip, 
+                         "&city=new+york&state=NY&benchmark=9&format=json")
+    to.parms <- paste0("street=", to, "+", 
+                       gsub(" ", "+", tree$street), "&zip=", tree$zip, 
+                       "&city=new+york&state=NY&benchmark=9&format=json")
+    fromCoord <- fromJSON(file = paste0(census.url, from.parms))
+    toCoord <- fromJSON(file = paste0(census.url, to.parms))
+    fromInt <- fromJSON(file = paste0(gis.url, fromCoord$result$addressMatches[[1]]$coordinates$x, 
+                                      ",", fromCoord$result$addressMatches[[1]]$coordinates$y,
+                                      "&returnIntersection=true"))
+    toInt <- fromJSON(file = paste0(gis.url, toCoord$result$addressMatches[[1]]$coordinates$x, 
+                                    ",", toCoord$result$addressMatches[[1]]$coordinates$y,
+                                    "&returnIntersection=true"))
+    if (grepl(tree$street, fromInt$address$Address)) {
+      cross1 <- gsub(tree$street, "", fromInt$address$Address)
+      cross1 <- gsub(" & ", "", cross1)
+    } else{
+      warning("Intersection does not include original street")
+    }
+    if (grepl(tree$street, toInt$address$Address)) {
+      cross2 <- gsub(tree$street, "", toInt$address$Address)
+      cross2 <- gsub(" & ", "", cross2)
+    } else{
+      warning("Intersection does not include original street")
+    }
+    # order so multiple segment entries will match
+    fromCross <- min(cross1, cross2)
+    toCross <- max(cross1, cross2)
+    gis.url.parms1 <- URLencode(paste0(tree$street, " and ", fromCross, ", nyc"))
+    coords.cross1 <- paste0(gis.url.find, "&text=", gis.url.parms1)
+    gis.url.parms2 <- URLencode(paste0(tree$street, " and ", toCross, ", nyc"))
+    coords.cross2 <- paste0(gis.url.find, "&text=", gis.url.parms2)
+    coords.cross1 <- fromJSON(file = coords.cross1)
+    coords.cross2 <- fromJSON(file = coords.cross2)
+    tmp <- data.frame(id = nrow(blocks) + 1, start = min(from, to), end = max(from, to), 
+                      street = tree$street, cross1 = fromCross, 
+                      cross1.lat = coords.cross1$locations[[1]]$feature$geometry$y,
+                      cross1.lon = coords.cross1$locations[[1]]$feature$geometry$x,
+                      cross2 = toCross,
+                      cross2.lat = coords.cross2$locations[[1]]$feature$geometry$y,
+                      cross2.lon = coords.cross2$locations[[1]]$feature$geometry$x,
+                      zip = tree$zip, count = 1, stringsAsFactors = FALSE)
+    tmp},
+    error = function(err) {
+      addBlockErr <<- c(addBlockErr, tree$id)
+      tmp <- data.frame(id = nrow(blocks) + 1, start = min(from, to), end = max(from, to), 
+                        street = tree$street, 
+                        cross1 = NA, cross1.lat = NA,cross1.lon = NA,
+                        cross2 = NA, cross2.lat = NA,cross2.lon = NA,
+                        zip = tree$zip, count = 1, stringsAsFactors = FALSE)
+      tmp
+    }
+  )
+}
+```
+
+This is a good point to check the validity of all the calls.  
+
+```{r}
+mymap <- get_map(location = "40.72017399459069,-73.98639034958494", zoom = 15, 
+                 maptype = "toner-lines")
+blocks$int1 = paste(blocks$street, "&", blocks$cross1)
+blocks$int2 = paste(blocks$street, "&", blocks$cross2)
+g <-  ggmap(mymap) + 
+      scale_size(range = c(5, 7)) +
+      theme_nothing() +
+      scale_color_continuous(low = "chartreuse", high = "chartreuse4") +
+      geom_point(aes(x = cross1.lon, y = cross1.lat), data = blocks, color = "red", size = 5) +
+      geom_text(aes(label = int1, x = cross1.lon, y = cross1.lat), data = blocks, color = "blue",
+                check_overlap  = TRUE) +
+       geom_point(aes(x = cross2.lon, y = cross2.lat), 
+            data = data.frame(int2 = blocks$int2, 
+                              cross2.lat = blocks$cross2.lat, 
+                              cross2.lon = blocks$cross2.lon),
+             color = "red", size = 5) +
+      geom_text(aes(label = int2, x = cross2.lon, y = cross2.lat), 
+                data = data.frame(int2 = blocks$int2, 
+                                  cross2.lat = blocks$cross2.lat, 
+                                  cross2.lon = blocks$cross2.lon),
+                 color = "blue", check_overlap  = TRUE)
+```
