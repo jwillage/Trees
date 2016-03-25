@@ -5,11 +5,18 @@ date: "March 23, 2016"
 output: html_document
 ---
 
-```{r, echo = FALSE}
+```{r, include = FALSE}
 library(ggmap)
+library(knitr)
 samp <- readRDS("samp.rds")
 treeMap <- readRDS("treeMap.rds")
 blocks <- readRDS("blocks.rds")
+```
+
+
+```{r global_options, include=FALSE}
+knitr::opts_chunk$set(fig.width = 8, fig.height = 8, fig.path='Figs/', 
+                      warning = FALSE, message = FALSE)
 ```
 
 Data is pulled from the NYC Street Tree Map site (see sources file). The call takes in diagonal 
@@ -177,21 +184,18 @@ mymap <- get_map(location = "40.72017399459069,-73.98639034958494", zoom = 15,
                  maptype = "toner-lines")
 blocks$int1 = paste(blocks$street, "&", blocks$cross1)
 blocks$int2 = paste(blocks$street, "&", blocks$cross2)
+blocks2 <- data.frame(int2 = blocks$int2, 
+                      cross2.lat = blocks$cross2.lat, 
+                      cross2.lon = blocks$cross2.lon)
 g <-  ggmap(mymap) + 
-      scale_size(range = c(5, 7)) +
       theme_nothing() +
-      scale_color_continuous(low = "chartreuse", high = "chartreuse4") +
       geom_point(aes(x = cross1.lon, y = cross1.lat), data = blocks, color = "red", size = 5) +
       geom_text(aes(label = int1, x = cross1.lon, y = cross1.lat), data = blocks, color = "blue",
                 check_overlap  = TRUE) +
-       geom_point(aes(x = cross2.lon, y = cross2.lat), 
-            data = data.frame(int2 = blocks$int2, 
-                              cross2.lat = blocks$cross2.lat, 
-                              cross2.lon = blocks$cross2.lon),
-             color = "red", size = 5) +
-      geom_text(aes(label = int2, x = cross2.lon, y = cross2.lat), 
-                data = data.frame(int2 = blocks$int2, 
-                                  cross2.lat = blocks$cross2.lat, 
-                                  cross2.lon = blocks$cross2.lon),
-                 color = "blue", check_overlap  = TRUE)
+      geom_point(aes(x = cross2.lon, y = cross2.lat), data = blocks2, color = "red",   size = 5) +
+      geom_text(aes(label = int2, x = cross2.lon, y = cross2.lat), data = blocks2, color = "blue",
+                 check_overlap  = TRUE)
+g
 ```
+
+Everything is lining up correctly. 
