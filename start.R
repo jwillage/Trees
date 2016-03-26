@@ -42,8 +42,10 @@ addBlock <- function(tree) {
     crossCoords <- geocodeBlockEnds(tree$street, fromCross, toCross)
     tmp <- data.frame(id = max(blocks$id) + 1, start = min(from, to), end = max(from, to), 
                       street = tree$street, 
-                      cross1 = fromCross, cross1.lat = crossCoords[1], cross1.lon = crossCoords[2],
-                      cross2 = toCross, cross2.lat = crossCoords[3], cross2.lon = crossCoords[4],
+                      cross1 = fromCross, 
+                      cross1.lat = crossCoords$cross1$y, cross1.lon = crossCoords$cross1$x,
+                      cross2 = toCross, 
+                      cross2.lat = crossCoords$cross2$y, cross2.lon = crossCoords$cross2$x,
                       zip = tree$zip, count = 1, stringsAsFactors = FALSE)
     tmp
     },
@@ -100,10 +102,19 @@ geocodeBlockEnds <- function(street, cross1, cross2){
   coords.cross2 <- paste0(gis.url.find, "&text=", gis.url.parms2)
   coords.cross1 <- fromJSON(file = coords.cross1)
   coords.cross2 <- fromJSON(file = coords.cross2)
-  c(coords.cross1$locations[[1]]$feature$geometry$y, 
-    coords.cross1$locations[[1]]$feature$geometry$x,
-    coords.cross2$locations[[1]]$feature$geometry$y, 
-    coords.cross2$locations[[1]]$feature$geometry$x)
+  l <- list(street = street, 
+            cross1 = list(
+              street = cross1,
+              y = coords.cross1$locations[[1]]$feature$geometry$y,
+              x = coords.cross1$locations[[1]]$feature$geometry$x
+            ),
+            cross2 = list(
+              street = cross2,
+              y = coords.cross2$locations[[1]]$feature$geometry$y,
+              x = coords.cross2$locations[[1]]$feature$geometry$x
+            )
+  )
+  l
 }
 
 # This roughly describes an MBB between the Manhattan bridge and 8th and D.
