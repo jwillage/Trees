@@ -39,7 +39,7 @@ addBlock <- function(tree) {
     } else{
       warning("Intersection does not include original street")
     }
-    crossCoords <- geocodeBlockEnds(tree$street, fromCross, toCross)
+    crossCoords <- geocodeBlockEnds(tree$street, cross1, cross2)
     tmp <- data.frame(id = max(blocks$id) + 1, start = min(from, to), end = max(from, to), 
                       street = tree$street, 
                       cross1 = fromCross, 
@@ -139,7 +139,7 @@ treeMap <- lapply(raw$item, function(i) {
   })
 
 treeMap.raw <- treeMap
-treeMap <- data.frame(matrix(unlist(treeMap.raw.orig), ncol = 5, byrow = TRUE), 
+treeMap <- data.frame(matrix(unlist(treeMap.raw), ncol = 4, byrow = TRUE), 
                       stringsAsFactors = FALSE)
 treeMap$X5 <- gsub(", (New York|Knickerbocker), New York", "", treeMap$X5)
 treeMap <- treeMap %>% separate(col = X5, into = c("address", "zip"), sep = ", ") %>% 
@@ -179,48 +179,13 @@ for (i in 1 : nrow(treeMap)) {
   } 
 }
 
-# Collapse both street sides into single segment
+
 # todo check that min/max works when relevant rows come up
-s <- blocks %>% group_by(street, cross1, cross1.lat, cross1.lon, cross2, 
+blocks.agg <- blocks %>% group_by(street, cross1, cross1.lat, cross1.lon, cross2, 
                          cross2.lat, cross2.lon) %>% 
   summarize(start = min(start), end = max(end), combined = n(),total = sum(count)) %>% 
   as.data.frame()
 
-combined <- inner_join(blocks, treeMap, by = c("id" = "blockId"))
-
-
-# Manual cross-street correction
-s[is.na(s$street), c("street", "cross1", "cross2", "zip")] <- "NA"
-s[s$cross2 == "E Houston St & Avenue D", "cross2"] <- "Avenue D"
-s[s$cross2 == "Stanton St & Pitt St", "cross2"] <- "Grand St"
-s[s$cross2 == "E Houston St & Ludlow St", "cross2"] <- "Avenue A"
-s[s$cross2 == "Delancey St S & Baruch Dr", "cross2"] <-  "Stanton St"
-# instances where cross1 == cross2
-s[s$cross2 == "Clinton St" & s$cross1 == "Clinton St",  "cross2"] <-  "Attorney St"
-s[s$cross1 == "E 1st St" & s$cross2 == "E 1st St", "cross1"] <- "E Houston St"
-s[s$cross1 == "Rivington St" & s$cross2 == "Rivington St" & 
-    s$street == "Columbia St", "cross1"] <- "Delancey St"
-s[s$cross1 == "Rivington St" & s$cross2 == "Rivington St" & 
-    s$street == "Chrystie St", "cross1"] <- "Stanton St"
-s[s$cross1 == "Chrystie St" & s$cross2 == "Chrystie St", "cross1"] <- "Bowery"
-s[s$cross1 == "Stanton St" & s$cross2 == "Stanton St", "cross1"] <- "Rivington St"
-s[s$cross1 == "Ridge St" & s$cross2 == "Ridge St" & 
-    s$street == "Broome St", "cross1"] <- "Clinton St"
-s[s$cross1 == "Ridge St" & s$cross2 == "Ridge St" &
-    s$street == "Grand St", c("cross1", "cross2")] <- c("Attorney St", "Pitt St")
-s[s$cross1 == "E 3rd St" & s$cross2 == "E 3rd St", "cross2"] <- "E 4th St"
-s[s$cross1 == "E 4th St" & s$cross2 == "E 4th St", "cross1"] <- "E 3rd St"
-s[s$cross1 == "E 5th St" & s$cross2 == "E 5th St", "cross1"] <- "E 4th St"
-s[s$cross1 == "Spring St" & s$cross2 == "Spring St", "cross2"] <- "Rivington St"
-s[s$cross1 == "Lewis St" & s$cross2 == "Lewis St", "cross1"] <- "Baruch Dr"
-s[s$cross1 == "Mangin St" & s$cross2 == "Mangin St", "cross2"] <- "FDR Dr"
-s[s$cross1 == "Samuel Dickstein Plz" & s$cross2 == "Samuel Dickstein Plz", "cross2"] <- "Grand St"
-
-# re-agg after fixes; account for mult rows of same segment ie row1$cross1==row2$cross2; comb. zips
-cross1 <- pmin(s$cross1, s$cross2)
-cross2 <- pmax(s$cross1, s$cross2)
-s <- data.frame(street = s$street, cross1, cross2, total = s$total)
-dat <- s %>% group_by(street, cross1, cross2) %>% summarize(total = sum(total)) %>% as.data.frame()
 
 # Distance of an intersection
 #add start and end geo code to each block. that will allow to plot on the map and calculate distance 

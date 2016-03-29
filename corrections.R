@@ -42,3 +42,21 @@ blocks[blocks$id == 139, c(5:10)] <- c(g$cross1$street, g$cross1$y, g$cross2$x,
 blocks[blocks$id == 201, c("start", "end")] <- c(295, 313)
 blocks[blocks$id == 201, c(5:10)] <- c("E Broadway", 40.714596, -73.9830705,
                                        "Grand St", 40.714657, -73.9825233)
+
+blocks[blocks$id == 35, c("start", "end")] <- c(393, 411)
+g <- geocodeBlockEnds("Grand St", "Clinton St", "Suffolk St")
+blocks[blocks$id == 35, c(5:10)] <- c(g$cross1$street, g$cross1$y, g$cross2$x,
+                                       g$cross2$street, g$cross2$y, g$cross2$x)
+g <- geocodeBlockEnds("2nd Ave", "E 1st St", "E Houston St")
+blocks[blocks$id == 52, c(5:10)] <- c(g$cross1$street, g$cross1$y, g$cross2$x,
+                                      g$cross2$street, g$cross2$y, g$cross2$x)
+g <- geocodeBlockEnds("Chrystie St", "Rivington St", "Stanton St")
+blocks[blocks$id == 60, c(5:10)] <- c(g$cross1$street, g$cross1$y, g$cross2$x,
+                                      g$cross2$street, g$cross2$y, g$cross2$x)
+g <- geocodeBlockEnds("Rivington St", "Bowery", "Chrystie St")
+blocks[blocks$id == 61, c(5:10)] <- c(g$cross1$street, g$cross1$y, g$cross2$x,
+                                      g$cross2$street, g$cross2$y, g$cross2$x)
+g <- geocodeBlockEnds("Attorney St", "Rivington St", "Stanton St")
+blocks[blocks$id == 79, c(5:10)] <- c(g$cross1$street, g$cross1$y, g$cross2$x,
+                                      g$cross2$street, g$cross2$y, g$cross2$x)
+#continue with same[7: end, ] then resave blocks and run through "aggregation" in start.R
