@@ -7,24 +7,22 @@ output:
     keep_md: yes
 ---
 
-```{r, include = FALSE}
+This is a first attempt at analyzing the NYC Street Tree Map data, specifically to find out which 
+are the most tree-lined blocks.
+
+```{r, warning = FALSE, message = FALSE}
 library(ggmap)
 library(knitr)
 library(rjson)
 library(dplyr)
-samp <- readRDS("samp.rds")
-treeMap <- readRDS("treeMap.rds")
-blocks <- readRDS("blocks.rds")
-blocks.les <- readRDS("blocks.les.raw.rds")
 ```
 
-
-```{r global_options, include=FALSE}
-knitr::opts_chunk$set(fig.width = 8, fig.height = 8, fig.path='Figs/', 
-                      warning = FALSE, message = FALSE)
+```{r global_options, include = FALSE}
+knitr::opts_chunk$set(fig.width = 7, fig.height = 7, fig.path='Figs/', 
+                      warning = FALSE, message = FALSE, cache = TRUE)
 ```
 
-Data is pulled from the NYC Street Tree Map site (see sources file). The call takes in diagonal 
+Data is pulled from the NYC Street Tree Map site[^1]. The call takes in diagonal 
 points and creates an MBB using those points as the southwest and northeast corners. The coordinates
 below roughly describe a rectangle between the Manhattan bridge up to 8th and D. This is a 
 reasonable area to start with while everything gets checked out and validated. 
@@ -46,17 +44,18 @@ The json returned includes the latitude and longitude for each tree in the range
 tree species, trunk diameter, and a few other data points. At this point the data is trimmed down
 from 1976 to a sample of 20 trees. These 20 will be used for validation. 
 
-```{r, eval = FALSE}
-samp <- raw$item[1:20]
+```{r, include = FALSE}
+raw <- readRDS("raw.rds")
 ```
 
 ```{r}
+samp <- raw$item[1:20]
 samp[[1]]
 ```
 
 
-The ArcGIS API is used to reverse geocode each data point. It returns the closest address to each
-tree.  
+The ArcGIS API[^2] is used to reverse geocode each data point. It returns the closest address to 
+each tree.  
 
 ```{r, eval = FALSE}
 gis.url <- paste0("http://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer/",
@@ -77,12 +76,16 @@ treeMap$lat <- as.numeric(treeMap$lat)
 treeMap$lon <- as.numeric(treeMap$lon)
 ```
 
+```{r, include = FALSE}
+treeMap <- readRDS("treeMap.sample.rds")
+```
+
 ```{r}
 head(treeMap)
 ```
 
 The next thing to do is build a reference table consisting of all the blocks, which are defined 
-as street segments between two adjacent intersecting streets. The Census geocoding services 
+as street segments between two adjacent intersecting streets. The Census geocoding service[^3] 
 provides start and end addresses for a block. Each tree has it's address looked up in the block 
 table. If there is no row whose address range includes the tree, a new block will be added via the
 add block function. 
@@ -182,14 +185,17 @@ addBlock <- function(tree) {
 }
 ```
 
+```{r, include = FALSE}
+blocks <- readRDS("blocks.sample.rds")
+```
+
 This is a good point to check the validity of all the calls.  
 
-```{r, cache = TRUE}
+```{r}
 mymap <- get_map(location = "40.72017399459069,-73.98639034958494", zoom = 15, 
                  maptype = "toner-lines")
 blocks$int1 = paste(blocks$street, "&", blocks$cross1)
-blocks$int2 = paste(blocks$street, "&", blocks$cross2)
-blocks2 <- data.frame(int2 = blocks$int2, 
+blocks2 <- data.frame(int2 = paste(blocks$street, "&", blocks$cross2),
                       cross2.lat = blocks$cross2.lat, 
                       cross2.lon = blocks$cross2.lon)
 g <-  ggmap(mymap) + 
@@ -204,18 +210,19 @@ g
 ```
 
 Everything is lining up correctly wrt intersections. A closer point-to-point inspection reveals
-minute discrepencies. For instance tree 216757 is reverse geocoded as being next to 464 Grand, but
+minute discrepancies. For instance tree 216757 is reverse geocoded as being next to 464 Grand, but
 in reality is closer to 293 E Broadway, across the street. The tree will plot correctly on the map,
 but it won't fall into the correct bucket when aggregating trees by block. This is an acceptable
-margin of error at this point, but in the future, there's the option to pull back the Tree Map's
-address of the tree (see sources). It correctly identified the address of tree 216757, but it's 
-also a lot of data to pull back for each tree, including large jpeg previws.  
+margin of error at this point, but in the future, there are other options to explore reverse 
+geocoding. 
 
 The same functions are performed on the original data set of 1976 trees. 
 
-```{r}
-treeMap <- readRDS("treeMap.les.blocks.rds")
+```{r, include = FALSE}
+treeMap <- readRDS("treeMap.rds")
+blocks.les <- readRDS("blocks.orig.rds")
 ```
+
 
 ```{r}
 summary(blocks.les)
@@ -223,11 +230,13 @@ incomplete <- blocks.les[!complete.cases(blocks.les),]
 sum(incomplete$count)
 ```
 
-The resulting blocks table has 246 entires, with 23 NA's. Examining one of the NA's, 1 - 99 Willett
+The resulting blocks table has `r nrow(blocks.les)` entries, with 
+`r sum(!complete.cases(blocks.les))` NA's. Examining one of the NA's, 1 - 99 Willett
 St (id == 179), the first intersection returns correctly at Willett and Delancey. However, the other
 end of the block, 99 Willett, is incorrectly reverse geocoded up at Stanton St. Those incomplete 
-blocks account for 195 trees, so it will be important to fill them in. To make the manual process
-easier, a subset of the `addBlock` function is broken out into the `geocodeBlockEnds` function.
+blocks account for `r sum(incomplete$count)` trees, so it will be important to fill them in. To make 
+the manual process easier, a subset of the `addBlock` function is broken out into the
+`geocodeBlockEnds` function.
 
 ```{r}
 gis.url.find <- "http://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer/find?f=json"
@@ -269,11 +278,19 @@ blocks.les[blocks.les$id == 2, ]
 ```
 
 That assignment has to be repeated for each of the other 22 NAs, manually entering the correct 
-cross streets. See corrections file for the full list of corrected segments. After that's finished,
-the coordinates need to be convereted back to numerics.
+cross streets. See [corrections file](https://github.com/jwillage/Trees/blob/master/corrections.R) 
+for the full list of corrected segments. And some further error checking for bad segments...
+
+```{r}
+same <- blocks.les[blocks.les$cross1 == blocks.les$cross2, ]
+nrow(same)
+```
+
+After correcting these manually (see corrections file), the previously bad intersections look as 
+follows
 
 ```{r, include = FALSE}
-blocks.les <- readRDS("blocks.les.raw.rds")
+blocks.les <- readRDS("blocks.corrected.rds")
 ```
 
 
@@ -282,24 +299,10 @@ blocks.les$cross1.lat <- as.numeric(blocks.les$cross1.lat)
 blocks.les$cross1.lon <- as.numeric(blocks.les$cross1.lon)
 blocks.les$cross2.lat <- as.numeric(blocks.les$cross2.lat)
 blocks.les$cross2.lon <- as.numeric(blocks.les$cross2.lon)
-```
 
-Further error checking for bad segments
-
-```{r}
-same <- blocks.les[blocks.les$cross1 == blocks.les$cross2, ]
-nrow(same)
-```
-
-After correcting these manually, the intersections look as follows
-
-```{r}
-blocks.les <- readRDS("blocks.les.sameCorrected.rds")
 oldSame <- blocks.les[blocks.les$id %in% same$id, ]
-
 oldSame$int1 = paste(oldSame$street, "&", oldSame$cross1)
-oldSame$int2 = paste(oldSame$street, "&", oldSame$cross2)
-oldSame2 <- data.frame(int2 = oldSame$int2, 
+oldSame2 <- data.frame(int2 = paste(oldSame$street, "&", oldSame$cross2),
                       cross2.lat = oldSame$cross2.lat, 
                       cross2.lon = oldSame$cross2.lon)
 g <-  ggmap(mymap) + 
@@ -313,8 +316,8 @@ g <-  ggmap(mymap) +
 g
 ```
 
-There's still some minute discrepencies, like the triangle of Grand/Clinton/E Broadway/
-Samuel Dickstein. But overall the new table is still better than the one with rows having
+There's still some minute discrepancies, like the triangle of Grand/Clinton/E Broadway/
+Samuel Dickstein. But overall the new table is more accurate than the one with rows having
 the same cross street for both sides. 
 
 Blocks are collapsed so both sides of the street fall into a single block. 
@@ -322,7 +325,7 @@ Blocks are collapsed so both sides of the street fall into a single block.
 ```{r}
 blocks.agg <- blocks.les %>% group_by(street, cross1, cross1.lat, cross1.lon, cross2, 
                          cross2.lat, cross2.lon) %>% 
-  summarize(start = min(start), end = max(end), combined = n(), trees = sum(count)) %>% 
+  summarize(start = min(start), end = max(end), trees = sum(count)) %>% 
   as.data.frame()
 # Remove incomplete cases (which have a 0 count anyway)
 blocks.agg <- blocks.agg[complete.cases(blocks.agg), ]
@@ -331,16 +334,15 @@ blocks.agg <- blocks.agg[complete.cases(blocks.agg), ]
 At this point it can be determined which blocks have the most trees. 
 
 ```{r}
-head(blocks.agg[order(blocks.agg$trees, decreasing = TRUE), ], 10)
+head(blocks.agg[order(blocks.agg$trees, decreasing = TRUE), c(1, 2, 5, 10)], 10)
 ```
 
 Not surprisingly, the long blocks between avenues have the highest count of trees, all of which 
 are in the East Village.
 
-```{r, cache = TRUE}
-map.evill <- get_map(location = "40.7228765,-73.9805015", zoom = 17, 
-                 maptype = "toner-lines")
-blocks.agg$int1 = paste(blocks.agg$street, "&", blocks.agg$cross1)
+```{r}
+map.evill <- get_map(location = "40.7228765,-73.9805015", zoom = 17, maptype = "toner-lines")
+blocks.agg$int1 <- paste(blocks.agg$street, "&", blocks.agg$cross1)
   
 g <- ggmap(map.evill) + 
   geom_point(data = treeMap, aes(x = lon, y = lat, size = stumpDiam, color = stumpDiam),
@@ -350,7 +352,107 @@ g <- ggmap(map.evill) +
   scale_color_continuous(low = "chartreuse", high = "chartreuse4") +
   geom_text(aes(label = int1, x = cross1.lon, y = cross1.lat), data = blocks.agg, color = "red",
                 fontface = "bold", check_overlap  = TRUE)
+blocks.agg$int1 <- NULL
 g
 ```
 
+"Which block is the most tree-lined" can be answered now, but that answer is biased. Longer blocks
+have an advantage. A more accurate measure would be trees per meter (TPM). To determine the distance
+of a block, the Great-circle distance is used with the Haversine formula.
 
+```{r}
+deg2rad <- function(deg) return(deg * pi / 180)
+
+gcd <- function(long1, lat1, long2, lat2) {
+  # Computes the great-circle distance between two points using the haversine formula
+  #
+  # Args:
+  #   long1:  Longitude of first point in decimal degrees
+  #   lat2:   Latitude of first point in decimal degrees
+  #   long2:  Longitude of first point in decimal degrees
+  #   lat2:   Latitude of second point in decimal degrees
+  #
+  # Returns:
+  #   The distance in meters
+  
+  long1 <- deg2rad(long1) 
+  lat1 <- deg2rad(lat1)
+  long2 <- deg2rad(long2) 
+  lat2 <- deg2rad(lat2)
+  r <- 6371000
+  long.delt <- (long2 - long1)
+  lat.delt <- (lat2 - lat1)
+  a <- sin(lat.delt / 2)^2 + cos(lat1) * cos(lat2) * sin(long.delt / 2)^2
+  c <- 2 * atan2(sqrt(a), sqrt(1 - a))
+  r * c
+}
+```
+
+```{r}
+blocks.agg$distance <- NULL
+for (i in 1:nrow(blocks.agg)) {
+  d <- gcd(blocks.agg[i, "cross1.lon"], 
+           blocks.agg[i, "cross1.lat"], 
+           blocks.agg[i, "cross2.lon"], 
+           blocks.agg[i, "cross2.lat"])
+  blocks.agg[i, "distance"] <- d 
+}
+
+blocks.agg$tpm <- blocks.agg$trees / blocks.agg$distance
+head(blocks.agg[order(blocks.agg$tpm, decreasing = TRUE), c(1, 2, 5, 10:12)], 10)
+```
+
+This gives an answer, but how valid is it? The preliminary checks above looked reasonably good, 
+but can the block of Grand between Clinton and Suffolk really have so many more trees per meter than
+any other block? A closer inspection can isolate the trees mapped to just that block. 
+
+```{r}
+blocks.les[blocks.les$street == "Grand St" & blocks.les$cross1 == "Clinton St",]
+treeMap[treeMap$blockId == 35, ]
+map.sewardPark <- get_map(location = "40.71597,-73.9889687", zoom = 17, maptype = "toner-lines")
+ggmap(map.sewardPark) + 
+   geom_point(data = treeMap[treeMap$blockId == 35,],
+              aes(x = lon, y = lat, size = stumpDiam), alpha = 0.35, color = "chartreuse") +
+   scale_size(range = c(5, 7)) +
+   theme_nothing()
+```
+
+The majority of the trees actually lie along Clinton, although they were coded at 410 Grand. 
+This highlights the roughness of geocoding coordinates to addresses, and the limitations of the 
+tools available. The manual work using the above procedures make it unfeasible to report over the 
+entire city, which includes more than 300,000 trees. 
+At this point, there's enough certainty to say that the blocks from this sample data set 
+with the most trees per meter (and trees in general) are between Avenues C and D. Here is the 
+complete map of all the trees from the original request.
+
+```{r}
+g <- ggmap(mymap) + 
+  geom_point(data = treeMap,
+             aes(x = lon, y = lat, size = stumpDiam, color = stumpDiam), 
+             alpha = 0.35) +
+  scale_size(range = c(5, 7)) +
+  theme_nothing() +
+  scale_color_continuous(low = "chartreuse", high = "chartreuse4")
+g
+```
+
+[^1]: **New York City Street Tree Map Beta**  
+  Interactive map to view details from a city-wide to a single tree level. No official API  
+  https://tree-map.nycgovparks.org/points/\<SW lat>\/\<SW lng\>/\<NE lat\>/\<NE lng\>/undefined/
+  \<start tree\>/\<end tree\>  
+  View details of a specific tree, including closest address:  
+  https://tree-map.nycgovparks.org/tree/full/\<tree-id from points json\>  
+  Browser-based map:  
+  https://tree-map.nycgovparks.org/ &nbsp;&nbsp;&nbsp;
+  
+[^2]: **ArcGIS REST API: World Geocoding Service**  
+  ReverseGeocode returns the closest address to a given lat/lng location  
+  http://developers.arcgis.com/rest/geocode/api-reference/geocoding-reverse-geocode.htm  
+  The Find operation geocodes input and can handle intersections  
+  https://developers.arcgis.com/rest/geocode/api-reference/geocoding-find.htm  &nbsp;&nbsp;&nbsp;
+  
+[^3]: **US Census Geocoding Services**  
+  Geocodes addresses and also returns the range of addresses on the block of input
+  http://geocoding.geo.census.gov/geocoder/Geocoding_Services_API.html  
+  Also available as browser-based app: http://geocoding.geo.census.gov/geocoder/locations/address 
+  &nbsp;&nbsp;&nbsp;

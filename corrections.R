@@ -43,6 +43,7 @@ blocks[blocks$id == 201, c("start", "end")] <- c(295, 313)
 blocks[blocks$id == 201, c(5:10)] <- c("E Broadway", 40.714596, -73.9830705,
                                        "Grand St", 40.714657, -73.9825233)
 
+# cross1 == cross2
 blocks[blocks$id == 35, c("start", "end")] <- c(393, 411)
 g <- geocodeBlockEnds("Grand St", "Clinton St", "Suffolk St")
 blocks[blocks$id == 35, c(5:10)] <- c(g$cross1$street, g$cross1$y, g$cross2$x,
@@ -98,5 +99,3 @@ blocks[blocks$id == 74, c(5:10)] <- c(g$cross1$street, g$cross1$y, g$cross2$x,
                                        g$cross2$street, g$cross2$y, g$cross2$x)
 blocks[blocks$id == 71, c(5:10)] <- c("Avenue C", 40.7210286, -73.9810792,
                                       "E Houston St", 40.7203769, -73.979765)
-
-#continue with same[7: end, ] then resave blocks and run through "aggregation" in start.R

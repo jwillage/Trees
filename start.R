@@ -88,7 +88,7 @@ gcd <- function(long1, lat1, long2, lat2) {
   r * c
 }
 
-deg2rad <- function(deg) return(deg*pi/180)
+deg2rad <- function(deg) return(deg * pi / 180)
 
 geocodeBlockEnds <- function(street, cross1, cross2){
   # given cross streets, add x and y coords
@@ -179,54 +179,23 @@ for (i in 1 : nrow(treeMap)) {
   } 
 }
 
-
-# todo check that min/max works when relevant rows come up
 blocks.agg <- blocks %>% group_by(street, cross1, cross1.lat, cross1.lon, cross2, 
                          cross2.lat, cross2.lon) %>% 
   summarize(start = min(start), end = max(end), combined = n(),total = sum(count)) %>% 
   as.data.frame()
 
 
-# Distance of an intersection
-#add start and end geo code to each block. that will allow to plot on the map and calculate distance 
-# can't use gis results from original start/end address call. Need to consider entire segment.
-dat$distance <- NULL
-err <- NULL
-for (i in 1:nrow(dat)) {
-  tryCatch({
-    gis.url.parms1 <- URLencode(paste0(dat[i, "street"], " and ", dat[i, "cross1"], ", nyc"))
-    coords.cross1 <- paste0(gis.url.find, "&text=", gis.url.parms1)
-    gis.url.parms2 <- URLencode(paste0(dat[i, "street"], " and ", dat[i, "cross2"], ", nyc"))
-    coords.cross2 <- paste0(gis.url.find, "&text=", gis.url.parms2)
-    coords.cross1 <- fromJSON(file = coords.cross1)
-    coords.cross2 <- fromJSON(file = coords.cross2)
-    d <- gcd(coords.cross1$locations[[1]]$feature$geometry$x, 
-             coords.cross1$locations[[1]]$feature$geometry$y, 
-             coords.cross2$locations[[1]]$feature$geometry$x, 
-             coords.cross2$locations[[1]]$feature$geometry$y)
-    dat[i, "distance"] <- d 
-  },
-  error = function(e){
-    err <<- c(err, i)
-  })
+# Add distance between intersections
+blocks.agg$distance <- NULL
+for (i in 1:nrow(blocks.agg)) {
+  d <- gcd(blocks.agg[i, "cross1.lon"], 
+           blocks.agg[i, "cross1.lat"], 
+           blocks.agg[i, "cross2.lon"], 
+           blocks.agg[i, "cross2.lat"])
+  blocks.agg[i, "distance"] <- d 
 }
 
-dat$tpm <- dat$total / dat$distance
+blocks.agg$tpm <- blocks.agg$trees / blocks.agg$distance
 head(dat[order(dat$tpm, decreasing = T),], 20)
-
-## Map to check validity of points
-mymap <- get_map(location = "40.72017399459069,-73.98639034958494", zoom = 15, 
-                 maptype = "toner-lines")
-inv <- readPNG("invert.png")
-combined$text = paste(combined$street.x, "bw", combined$cross1, "and", combined$cross2, "\n tree", combined$id.y)
-g <- ggmap(mymap) + 
-  #  inset_raster(inv, xmin = -74.048, xmax = -73.928, ymin = 40.68, ymax = 40.766) +
-  geom_point(data = combined,
-             aes(x = lon, y = lat, size = stumpDiam, color = stumpDiam), 
-             alpha = 0.35) +
-  scale_size(range = c(5, 7)) +
-  theme_nothing() +
-  scale_color_continuous(low = "chartreuse", high = "chartreuse4") +
-  geom_text(aes(label = text, x = lon, y = lat), data = combined, check_overlap  = TRUE )
 
 
