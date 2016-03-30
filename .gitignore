@@ -1,12 +1,8 @@
+.*
 *.Rproj*
-.Rhistory
-.RData
 *.html
+*.pdf
 invert.png
 privatekey.txt
-.Rproj.user
-.DS_Store
-.*
-rmd/Setup_cache/
-rmd/*.rds
-*.pdf
+rmd/*/Setup_cache/
+rmd/*/rds
