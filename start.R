@@ -13,6 +13,7 @@ addBlock <- function(tree) {
     from <- as.numeric(result$result$addressMatches[[1]]$addressComponents$fromAddress)
     to <- as.numeric(result$result$addressMatches[[1]]$addressComponents$toAddress)
     # side <- result$result$addressMatches[[1]]$tigerLine$side
+    # geocode addresses at each side of block
     from.parms <- paste0("street=", from, "+", 
                          gsub(" ", "+", tree$street), "&zip=", tree$zip, 
                          "&city=new+york&state=NY&benchmark=9&format=json")
@@ -21,6 +22,7 @@ addBlock <- function(tree) {
                        "&city=new+york&state=NY&benchmark=9&format=json")
     fromCoord <- fromJSON(file = paste0(census.url, from.parms))
     toCoord <- fromJSON(file = paste0(census.url, to.parms))
+    # lookup cross street
     fromInt <- fromJSON(file = paste0(gis.url, fromCoord$result$addressMatches[[1]]$coordinates$x, 
                                       ",", fromCoord$result$addressMatches[[1]]$coordinates$y,
                                       "&returnIntersection=true"))

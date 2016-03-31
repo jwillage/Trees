@@ -45,7 +45,7 @@ tree species, trunk diameter, and a few other data points. At this point the dat
 from 1976 to a sample of 20 trees. These 20 will be used for validation. 
 
 ```{r, include = FALSE}
-raw <- readRDS("raw.rds")
+raw <- readRDS("rds/raw.rds")
 ```
 
 ```{r}
@@ -77,7 +77,7 @@ treeMap$lon <- as.numeric(treeMap$lon)
 ```
 
 ```{r, include = FALSE}
-treeMap <- readRDS("treeMap.sample.rds")
+treeMap <- readRDS("rds/treeMap.sample.rds")
 ```
 
 ```{r}
@@ -128,6 +128,7 @@ addBlock <- function(tree) {
     result <- fromJSON(file = paste0(census.url, census.parms))
     from <- as.numeric(result$result$addressMatches[[1]]$addressComponents$fromAddress)
     to <- as.numeric(result$result$addressMatches[[1]]$addressComponents$toAddress)
+    # geocode addresses at each side of block
     from.parms <- paste0("street=", from, "+", 
                          gsub(" ", "+", tree$street), "&zip=", tree$zip, 
                          "&city=new+york&state=NY&benchmark=9&format=json")
@@ -136,6 +137,7 @@ addBlock <- function(tree) {
                        "&city=new+york&state=NY&benchmark=9&format=json")
     fromCoord <- fromJSON(file = paste0(census.url, from.parms))
     toCoord <- fromJSON(file = paste0(census.url, to.parms))
+    # lookup cross street
     fromInt <- fromJSON(file = paste0(gis.url, fromCoord$result$addressMatches[[1]]$coordinates$x, 
                                       ",", fromCoord$result$addressMatches[[1]]$coordinates$y,
                                       "&returnIntersection=true"))
@@ -157,6 +159,7 @@ addBlock <- function(tree) {
     # order so multiple segment entries will match
     fromCross <- min(cross1, cross2)
     toCross <- max(cross1, cross2)
+    # geocode intersection by names. More accurate point than start/end address
     gis.url.parms1 <- URLencode(paste0(tree$street, " and ", fromCross, ", nyc"))
     coords.cross1 <- paste0(gis.url.find, "&text=", gis.url.parms1)
     gis.url.parms2 <- URLencode(paste0(tree$street, " and ", toCross, ", nyc"))
@@ -186,12 +189,12 @@ addBlock <- function(tree) {
 ```
 
 ```{r, include = FALSE}
-blocks <- readRDS("blocks.sample.rds")
+blocks <- readRDS("rds/blocks.sample.rds")
 ```
 
 This is a good point to check the validity of all the calls.  
 
-```{r}
+```{r sampleIntersections}
 mymap <- get_map(location = "40.72017399459069,-73.98639034958494", zoom = 15, 
                  maptype = "toner-lines")
 blocks$int1 = paste(blocks$street, "&", blocks$cross1)
@@ -216,11 +219,11 @@ but it won't fall into the correct bucket when aggregating trees by block. This 
 margin of error at this point, but in the future, there are other options to explore reverse 
 geocoding. 
 
-The same functions are performed on the original data set of 1976 trees. 
+The same process is performed on the original data set of 1976 trees. 
 
 ```{r, include = FALSE}
-treeMap <- readRDS("treeMap.rds")
-blocks.les <- readRDS("blocks.orig.rds")
+treeMap <- readRDS("rds/treeMap.rds")
+blocks.les <- readRDS("rds/blocks.orig.rds")
 ```
 
 
@@ -290,11 +293,11 @@ After correcting these manually (see corrections file), the previously bad inter
 follows
 
 ```{r, include = FALSE}
-blocks.les <- readRDS("blocks.corrected.rds")
+blocks.les <- readRDS("rds/blocks.corrected.rds")
 ```
 
 
-```{r}
+```{r correctedIntersections}
 blocks.les$cross1.lat <- as.numeric(blocks.les$cross1.lat)
 blocks.les$cross1.lon <- as.numeric(blocks.les$cross1.lon)
 blocks.les$cross2.lat <- as.numeric(blocks.les$cross2.lat)
@@ -340,7 +343,7 @@ head(blocks.agg[order(blocks.agg$trees, decreasing = TRUE), c(1, 2, 5, 10)], 10)
 Not surprisingly, the long blocks between avenues have the highest count of trees, all of which 
 are in the East Village.
 
-```{r}
+```{r eastVill}
 map.evill <- get_map(location = "40.7228765,-73.9805015", zoom = 17, maptype = "toner-lines")
 blocks.agg$int1 <- paste(blocks.agg$street, "&", blocks.agg$cross1)
   
@@ -406,7 +409,7 @@ This gives an answer, but how valid is it? The preliminary checks above looked r
 but can the block of Grand between Clinton and Suffolk really have so many more trees per meter than
 any other block? A closer inspection can isolate the trees mapped to just that block. 
 
-```{r}
+```{r sewardPark}
 blocks.les[blocks.les$street == "Grand St" & blocks.les$cross1 == "Clinton St",]
 treeMap[treeMap$blockId == 35, ]
 map.sewardPark <- get_map(location = "40.71597,-73.9889687", zoom = 17, maptype = "toner-lines")
@@ -425,7 +428,7 @@ At this point, there's enough certainty to say that the blocks from this sample 
 with the most trees per meter (and trees in general) are between Avenues C and D. Here is the 
 complete map of all the trees from the original request.
 
-```{r}
+```{r lesMap}
 g <- ggmap(mymap) + 
   geom_point(data = treeMap,
              aes(x = lon, y = lat, size = stumpDiam, color = stumpDiam), 

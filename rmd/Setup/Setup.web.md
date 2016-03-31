@@ -1,9 +1,4 @@
-# Setup
-Joe Willage  
-March 23, 2016  
-
-This is a first attempt at analyzing the NYC Street Tree Map data, specifically to find out which 
-are the most tree-lined blocks.
+This is a first attempt at analyzing the NYC Street Tree Map data, specifically to find out which are the most tree-lined blocks.
 
 
 ```r
@@ -15,10 +10,7 @@ library(dplyr)
 
 
 
-Data is pulled from the NYC Street Tree Map site[^1]. The call takes in diagonal 
-points and creates an MBB using those points as the southwest and northeast corners. The coordinates
-below roughly describe a rectangle between the Manhattan bridge up to 8th and D. This is a 
-reasonable area to start with while everything gets checked out and validated. 
+Data is pulled from the NYC Street Tree Map site<a href="#fn1" class="footnoteRef" id="fnref1"><sup>1</sup></a>. The call takes in diagonal points and creates an MBB using those points as the southwest and northeast corners. The coordinates below roughly describe a rectangle between the Manhattan bridge up to 8th and D. This is a reasonable area to start with while everything gets checked out and validated. 
 
 
 ```r
@@ -34,9 +26,7 @@ treemap.url <- paste("https://tree-map.nycgovparks.org/points",
 raw <- fromJSON(file = treemap.url)
 ```
 
-The json returned includes the latitude and longitude for each tree in the range, as well as the 
-tree species, trunk diameter, and a few other data points. At this point the data is trimmed down
-from 1976 to a sample of 20 trees. These 20 will be used for validation. 
+The json returned includes the latitude and longitude for each tree in the range, as well as the tree species, trunk diameter, and a few other data points. At this point the data is trimmed down from 1976 to a sample of 20 trees. These 20 will be used for validation. 
 
 
 
@@ -99,8 +89,7 @@ samp[[1]]
 ```
 
 
-The ArcGIS API[^2] is used to reverse geocode each data point. It returns the closest address to 
-each tree.  
+The ArcGIS API<a href="#fn2" class="footnoteRef" id="fnref2"><sup>2</sup></a> is used to reverse geocode each data point. It returns the closest address to each tree.  
 
 
 ```r
@@ -111,7 +100,7 @@ treeMap <- lapply(samp, function(i) {
   c(i$id, i$lat, i$lng, i$stumpdiameter, address$address$Match_addr)
   })
 
-treeMap <- data.frame(matrix(unlist(treeMap.raw), ncol = 5, byrow = TRUE), stringsAsFactors = FALSE)
+treeMap <- data.frame(matrix(unlist(treeMap), ncol = 5, byrow = TRUE), stringsAsFactors = FALSE)
 treeMap$X5 <- gsub(", (New York|Knickerbocker), New York", "", treeMap$X5)
 treeMap <- treeMap %>% separate(col = X5, into = c("address", "zip"), sep = ", ") %>% 
                     separate(col = address, into = c("number", "street"), extra = "merge")
@@ -139,11 +128,7 @@ head(treeMap)
 ## 6 242345 40.72328 -73.97685        11    279     E 7th St 10009
 ```
 
-The next thing to do is build a reference table consisting of all the blocks, which are defined 
-as street segments between two adjacent intersecting streets. The Census geocoding service[^3] 
-provides start and end addresses for a block. Each tree has it's address looked up in the block 
-table. If there is no row whose address range includes the tree, a new block will be added via the
-add block function. 
+The next thing to do is build a reference table consisting of all the blocks, which are defined as street segments between two adjacent intersecting streets. The Census geocoding service<a href="#fn3" class="footnoteRef" id="fnref3"><sup>3</sup></a> provides start and end addresses for a block. Each tree has it's address looked up in the block table. If there is no row whose address range includes the tree, a new block will be added via the `addBlock` function. 
 
 
 ```r
@@ -268,14 +253,9 @@ g <-  ggmap(mymap) +
 g
 ```
 
-![](Figs/sampleIntersections-1.png) 
+![](/s/sampleIntersections-1.png) 
 
-Everything is lining up correctly wrt intersections. A closer point-to-point inspection reveals
-minute discrepancies. For instance tree 216757 is reverse geocoded as being next to 464 Grand, but
-in reality is closer to 293 E Broadway, across the street. The tree will plot correctly on the map,
-but it won't fall into the correct bucket when aggregating trees by block. This is an acceptable
-margin of error at this point, but in the future, there are other options to explore reverse 
-geocoding. 
+Everything is lining up correctly wrt intersections. A closer point-to-point inspection reveals minute discrepancies. For instance tree 216757 is reverse geocoded as being next to 464 Grand, but in reality is closer to 293 E Broadway, across the street. The tree will plot correctly on the map, but it won't fall into the correct bucket when aggregating trees by block. This is an acceptable margin of error at this point, but in the future, there are other options to explore reverse geocoding. 
 
 The same process is performed on the original data set of 1976 trees. 
 
@@ -323,13 +303,7 @@ sum(incomplete$count)
 ## [1] 186
 ```
 
-The resulting blocks table has 248 entries, with 
-23 NA's. Examining one of the NA's, 1 - 99 Willett
-St (id == 179), the first intersection returns correctly at Willett and Delancey. However, the other
-end of the block, 99 Willett, is incorrectly reverse geocoded up at Stanton St. Those incomplete 
-blocks account for 186 trees, so it will be important to fill them in. To make 
-the manual process easier, a subset of the `addBlock` function is broken out into the
-`geocodeBlockEnds` function.
+The resulting blocks table has 248 entries, with 23 NA's. Examining one of the NA's, 1 - 99 Willett St (id == 179), the first intersection returns correctly at Willett and Delancey. However, the other end of the block, 99 Willett, is incorrectly reverse geocoded up at Stanton St. Those incomplete blocks account for 186 trees, so it will be important to fill them in. To make the manual process easier, a subset of the `addBlock` function is broken out into the `geocodeBlockEnds` function.
 
 
 ```r
@@ -396,9 +370,7 @@ blocks.les[blocks.les$id == 2, ]
 ## 2 E Houston St 40.7181138295907 -73.9768161138717 10002    14
 ```
 
-That assignment has to be repeated for each of the other 22 NAs, manually entering the correct 
-cross streets. See [corrections file](https://github.com/jwillage/Trees/blob/master/corrections.R) 
-for the full list of corrected segments. And some further error checking for bad segments...
+That assignment has to be repeated for each of the other 22 NAs, manually entering the correct cross streets. See [corrections file](https://github.com/jwillage/Trees/blob/master/corrections.R) for the full list of corrected segments. And some further error checking for bad segments...
 
 
 ```r
@@ -410,8 +382,7 @@ nrow(same)
 ## [1] 38
 ```
 
-After correcting these manually (see corrections file), the previously bad intersections look as 
-follows
+After correcting these manually (see corrections file), the previously bad intersections look as follows
 
 
 
@@ -439,11 +410,9 @@ g <-  ggmap(mymap) +
 g
 ```
 
-![](Figs/correctedIntersections-1.png) 
+![](/s/correctedIntersections-1.png) 
 
-There's still some minute discrepancies, like the triangle of Grand/Clinton/E Broadway/
-Samuel Dickstein. But overall the new table is more accurate than the one with rows having
-the same cross street for both sides. 
+There's still some minute discrepancies, like the triangle of Grand/Clinton/E Broadway/Samuel Dickstein. But overall the new table is more accurate than the one with rows having the same cross street for both sides. 
 
 Blocks are collapsed so both sides of the street fall into a single block. 
 
@@ -478,8 +447,7 @@ head(blocks.agg[order(blocks.agg$trees, decreasing = TRUE), c(1, 2, 5, 10)], 10)
 ## 91    E 2nd St     Avenue A     Avenue B    28
 ```
 
-Not surprisingly, the long blocks between avenues have the highest count of trees, all of which 
-are in the East Village.
+Not surprisingly, the long blocks between avenues have the highest count of trees, all of which are in the East Village.
 
 
 ```r
@@ -498,11 +466,9 @@ blocks.agg$int1 <- NULL
 g
 ```
 
-![](Figs/eastVill-1.png) 
+![](/s/eastVill-1.png) 
 
-"Which block is the most tree-lined" can be answered now, but that answer is biased. Longer blocks
-have an advantage. A more accurate measure would be trees per meter (TPM). To determine the distance
-of a block, the Great-circle distance is used with the Haversine formula.
+"Which block is the most tree-lined" can be answered now, but that answer is biased. Longer blocks have an advantage. A more accurate measure would be trees per meter (TPM). To determine the distance of a block, the Great-circle distance is used with the Haversine formula.
 
 
 ```r
@@ -562,9 +528,7 @@ head(blocks.agg[order(blocks.agg$tpm, decreasing = TRUE), c(1, 2, 5, 10:12)], 10
 ## 106     E 7th St     Avenue C     Avenue D    25 111.28635 0.2246457
 ```
 
-This gives an answer, but how valid is it? The preliminary checks above looked reasonably good, 
-but can the block of Grand between Clinton and Suffolk really have so many more trees per meter than
-any other block? A closer inspection can isolate the trees mapped to just that block. 
+This gives an answer, but how valid is it? The preliminary checks above looked reasonably good, but can the block of Grand between Clinton and Suffolk really have so many more trees per meter than any other block? A closer inspection can isolate the trees mapped to just that block. 
 
 
 ```r
@@ -622,15 +586,9 @@ ggmap(map.sewardPark) +
    theme_nothing()
 ```
 
-![](Figs/sewardPark-1.png) 
+![](/s/sewardPark-1.png) 
 
-The majority of the trees actually lie along Clinton, although they were coded at 410 Grand. 
-This highlights the roughness of geocoding coordinates to addresses, and the limitations of the 
-tools available. The manual work using the above procedures make it unfeasible to report over the 
-entire city, which includes more than 300,000 trees. 
-At this point, there's enough certainty to say that the blocks from this sample data set 
-with the most trees per meter (and trees in general) are between Avenues C and D. Here is the 
-complete map of all the trees from the original request.
+The majority of the trees actually lie along Clinton, although they were coded at 410 Grand. This highlights the roughness of geocoding coordinates to addresses, and the limitations of the tools available. The manual work using the above procedures make it unfeasible to report over the entire city, which includes more than 300,000 trees. At this point, there's enough certainty to say that the blocks from this sample data set with the most trees per meter (and trees in general) are between Avenues C and D. Here is the complete map of all the trees from the original request.
 
 
 ```r
@@ -644,25 +602,14 @@ g <- ggmap(mymap) +
 g
 ```
 
-![](Figs/lesMap-1.png) 
+![](/s/lesMap-1.png) 
 
-[^1]: **New York City Street Tree Map Beta**  
-  Interactive map to view details from a city-wide to a single tree level. No official API  
-  https://tree-map.nycgovparks.org/points/\<SW lat>\/\<SW lng\>/\<NE lat\>/\<NE lng\>/undefined/
-  \<start tree\>/\<end tree\>  
-  View details of a specific tree, including closest address:  
-  https://tree-map.nycgovparks.org/tree/full/\<tree-id from points json\>  
-  Browser-based map:  
-  https://tree-map.nycgovparks.org/ &nbsp;&nbsp;&nbsp;
-  
-[^2]: **ArcGIS REST API: World Geocoding Service**  
-  ReverseGeocode returns the closest address to a given lat/lng location  
-  http://developers.arcgis.com/rest/geocode/api-reference/geocoding-reverse-geocode.htm  
-  The Find operation geocodes input and can handle intersections  
-  https://developers.arcgis.com/rest/geocode/api-reference/geocoding-find.htm  &nbsp;&nbsp;&nbsp;
-  
-[^3]: **US Census Geocoding Services**  
-  Geocodes addresses and also returns the range of addresses on the block of input
-  http://geocoding.geo.census.gov/geocoder/Geocoding_Services_API.html  
-  Also available as browser-based app: http://geocoding.geo.census.gov/geocoder/locations/address 
-  &nbsp;&nbsp;&nbsp;
+<div class="footnotes">
+<hr />
+<ol>
+<li id="fn1"><p><strong>New York City Street Tree Map Beta</strong><br /> Interactive map to view details from a city-wide to a single tree level. No official API<br /> <a href="https://tree-map.nycgovparks.org/points/" class="uri">https://tree-map.nycgovparks.org/points/</a>&lt;SW lat&gt;/&lt;SW lng&gt;/&lt;NE lat&gt;/&lt;NE lng&gt;/undefined/ &lt;start tree&gt;/&lt;end tree&gt;<br /> View details of a specific tree, including closest address:<br /> <a href="https://tree-map.nycgovparks.org/tree/full/" class="uri">https://tree-map.nycgovparks.org/tree/full/</a>&lt;tree-id from points json&gt;<br /> Browser-based map:<br /> <a href="https://tree-map.nycgovparks.org/" class="uri">https://tree-map.nycgovparks.org/</a> &nbsp;&nbsp;&nbsp;<a href="#fnref1">↩</a></p></li>
+<li id="fn2"><p><strong>ArcGIS REST API: World Geocoding Service</strong><br /> ReverseGeocode returns the closest address to a given lat/lng location<br /> <a href="http://developers.arcgis.com/rest/geocode/api-reference/geocoding-reverse-geocode.htm" class="uri">http://developers.arcgis.com/rest/geocode/api-reference/geocoding-reverse-geocode.htm</a><br /> The Find operation geocodes input and can handle intersections<br /> <a href="https://developers.arcgis.com/rest/geocode/api-reference/geocoding-find.htm" class="uri">https://developers.arcgis.com/rest/geocode/api-reference/geocoding-find.htm</a> &nbsp;&nbsp;&nbsp;<a href="#fnref2">↩</a></p></li>
+<li id="fn3"><p><strong>US Census Geocoding Services</strong><br /> Geocodes addresses and also returns the range of addresses on the block of input <a href="http://geocoding.geo.census.gov/geocoder/Geocoding_Services_API.html" class="uri">http://geocoding.geo.census.gov/geocoder/Geocoding_Services_API.html</a><br /> Also available as browser-based app: <a href="http://geocoding.geo.census.gov/geocoder/locations/address" class="uri">http://geocoding.geo.census.gov/geocoder/locations/address</a>&nbsp;&nbsp;&nbsp;<a href="#fnref3">↩</a></p></li>
+</ol>
+</div>
+
