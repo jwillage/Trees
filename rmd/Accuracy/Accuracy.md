@@ -16,6 +16,7 @@ library(ggmap)
 library(knitr)
 library(rjson)
 library(dplyr)
+library(tidyr)
 ```
 
 
@@ -61,13 +62,13 @@ seg <- fromJSON(file = paste0(nearestAddress.url, nearestAddress.parms))
 seg <- sapply(seg$streetSegment, function(i) c(i$name, i$fraddl, i$fraddr, i$toaddl, i$toaddr, 
                                               i$mtfcc, i$zip, i$postalcode, i$distance, i$line))
 segments <- seg %>% t %>% as.data.frame(stringsAsFactors = FALSE) %>% 
-            setNames(c("Street",	"fraddl", "fraddr",	"toaddl", "toaddr",	 "mtfcc",	"zip", 
+            setNames(c("street",	"fraddl", "fraddr",	"toaddl", "toaddr",	 "mtfcc",	"zip", 
                        "distance", "line"))
 segments[, 1:8]
 ```
 
 ```
-##        Street fraddl fraddr toaddl toaddr mtfcc   zip distance
+##        street fraddl fraddr toaddl toaddr mtfcc   zip distance
 ## 1  Clinton St    166    167    184    185 S1400 10002     0.01
 ## 2                                         S1710          0.035
 ## 3  Clinton St    186    187    198    197 S1400 10002    0.036
@@ -92,5 +93,14 @@ segments[1, "line"]
 ```
 
 ```r
-segments$id <- seq_along(segments$Street)
+segments$id <- seq_along(segments$street)
+lines.list <- strsplit(segments$line, ",")
+lines <- data.frame()
+for (i in 1:length(lines.list)){
+  lines <- rbind(lines, cbind(i, lines.list[[i]]))
+}
+lines$V2 <- as.character(lines$V2)
+lines <- separate(lines, V2, c("lon", "lat"), " ")
+lines$lon <- as.numeric(lines$lon)
+lines$lat <- as.numeric(lines$lat)
 ```

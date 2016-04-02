@@ -25,6 +25,7 @@ library(ggmap)
 library(knitr)
 library(rjson)
 library(dplyr)
+library(tidyr)
 ```
 
 ```{r, include = FALSE}
@@ -63,7 +64,7 @@ seg <- fromJSON(file = paste0(nearestAddress.url, nearestAddress.parms))
 seg <- sapply(seg$streetSegment, function(i) c(i$name, i$fraddl, i$fraddr, i$toaddl, i$toaddr, 
                                               i$mtfcc, i$zip, i$postalcode, i$distance, i$line))
 segments <- seg %>% t %>% as.data.frame(stringsAsFactors = FALSE) %>% 
-            setNames(c("Street",	"fraddl", "fraddr",	"toaddl", "toaddr",	 "mtfcc",	"zip", 
+            setNames(c("street",	"fraddl", "fraddr",	"toaddl", "toaddr",	 "mtfcc",	"zip", 
                        "distance", "line"))
 segments[, 1:8]
 ```
@@ -72,6 +73,14 @@ This useful result set returns the to and from addresses for both sides of the s
 
 ```{r}
 segments[1, "line"]
-segments$id <- seq_along(segments$Street)
-
+segments$id <- seq_along(segments$street)
+lines.list <- strsplit(segments$line, ",")
+lines <- data.frame()
+for (i in 1:length(lines.list)){
+  lines <- rbind(lines, cbind(i, lines.list[[i]]))
+}
+lines$V2 <- as.character(lines$V2)
+lines <- separate(lines, V2, c("lon", "lat"), " ")
+lines$lon <- as.numeric(lines$lon)
+lines$lat <- as.numeric(lines$lat)
 ```

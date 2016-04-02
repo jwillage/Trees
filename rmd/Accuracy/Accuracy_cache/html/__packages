@@ -4,3 +4,5 @@ ggplot2
 ggmap
 rjson
 dplyr
+stringr
+tidyr
