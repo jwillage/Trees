@@ -6,4 +6,6 @@ invert.png
 privatekey.txt
 rmd/*/Setup_cache/
 rmd/*/rds
+rmd/*/*.web.md
 .Rproj.user
+
