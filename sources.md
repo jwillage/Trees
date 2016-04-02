@@ -22,3 +22,8 @@ View details of a specific tree, including closest address:
 https://tree-map.nycgovparks.org/tree/full/\<tree-id from points json\>  
 Browser-based map:  
 https://tree-map.nycgovparks.org/  
+
+**Geonames Reverse Geocoding Webservice**  
+
+Provides several APIs for reverse coding coordinates back to addresses, intersections, and streets.  
+http://www.geonames.org/maps/us-reverse-geocoder.html  

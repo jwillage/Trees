@@ -1,0 +1,75 @@
+---
+title: "Accuracy"
+author: "Joe Willage"
+date: "March 30, 2016"
+output: html_document
+---
+
+```{r, include = FALSE}
+library(knitr)
+```
+
+```{r global_options, include = FALSE}
+knitr::opts_chunk$set(fig.width = 7, fig.height = 7, fig.path='Figs/', 
+                      warning = FALSE, message = FALSE, cache = TRUE)
+```
+
+This is an exploration to achieve higher accuracy in mapping latitude and longitude to a street segment. Here a segment is defined as a section of street bounded by two other streets. The end goal is an abstracted pattern, but the motivation is to more accurately map trees in New York City to a specific block. 
+
+The previous analysis left off by stating that an answer was reached, "but how valid is it?" Some inconsistancies were noted, specifically with the block that had the highest reported TPM. Recall the graphic that went with this statement. 
+
+```{r, warning = FALSE, message = FALSE}
+library(ggmap)
+library(knitr)
+library(rjson)
+library(dplyr)
+```
+
+```{r, include = FALSE}
+treeMap <- readRDS("rds/treeMap.les.rds")
+blocks.les <- readRDS("rds/blocks.corrected.les.rds")
+```
+
+```{r sewardPark}
+map.sewardPark <- get_map(location = "40.71597,-73.9889687", zoom = 17, maptype = "toner-lines")
+ggmap(map.sewardPark) + 
+   geom_point(data = treeMap[treeMap$blockId == 35,],
+              aes(x = lon, y = lat, size = stumpDiam), alpha = 0.35, color = "chartreuse") +
+   scale_size(range = c(5, 7)) +
+   theme_nothing()
+```
+
+And note that all of these trees mapped to the block of Grand b/w Clinton and Suffolk, when most actually lie on Clinton St. The southmost tree mapped to this block is the following.
+
+```{r}
+block.35 <- treeMap[treeMap$blockId == 35, ]
+head(block.35[order(block.35$lat), ], 1)
+```
+
+Tree 165907 is reverse geocoded as 410 Grand, but viewing the full tree data from the Tree Map website returns the nearest address as 187 Clinton, much more accurate. This may prove to be a useful alternative.  
+
+However, the Geonames Find Nearby Streets API provids another useful match. It's not the exact address that's needed for any tree, it's just the nearest street. In fact, that API provides not only the nearest street, but also the to/from addresses of the segment. A takeaway from the first analysis is that mixing and matching geocoding services gets messy. In attempt to minimize error, only the Geonames family of APIs will be used.  
+
+For the tree of interest, here is the result from the Geonames Find Nearby Streets call.
+
+```{r}
+user <- readLines("../../geonames.txt")
+nearestAddress.url <- paste0("http://api.geonames.org/findNearbyStreetsJSON?&username=", user, "&")
+nearestAddress.parms <- paste0("lat=", block.35[order(block.35$lat), ][1, "lat"], 
+                               "&lng=", block.35[order(block.35$lat), ][1, "lon"])
+seg <- fromJSON(file = paste0(nearestAddress.url, nearestAddress.parms))
+seg <- sapply(seg$streetSegment, function(i) c(i$name, i$fraddl, i$fraddr, i$toaddl, i$toaddr, 
+                                              i$mtfcc, i$zip, i$postalcode, i$distance, i$line))
+segments <- seg %>% t %>% as.data.frame(stringsAsFactors = FALSE) %>% 
+            setNames(c("Street",	"fraddl", "fraddr",	"toaddl", "toaddr",	 "mtfcc",	"zip", 
+                       "distance", "line"))
+segments[, 1:8]
+```
+
+This useful result set returns the to and from addresses for both sides of the street, as well as the distance from the street (which is how the results are ordered). This may be useful in validation. A final component, not included in the above table, is the coordinate line of each segment. This allows for drawing a multi-segment line on a map, another useful tool in validation. Plotting these street segments results in the following
+
+```{r}
+segments[1, "line"]
+segments$id <- seq_along(segments$Street)
+
+```

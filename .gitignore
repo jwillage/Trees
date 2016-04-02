@@ -8,4 +8,6 @@ rmd/*/Setup_cache/
 rmd/*/rds
 rmd/*/*.web.md
 .Rproj.user
+process.png
+geonames.txt
 
