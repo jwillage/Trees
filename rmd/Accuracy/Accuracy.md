@@ -1,38 +1,27 @@
----
-title: "Accuracy"
-author: "Joe Willage"
-date: "March 30, 2016"
-output: 
-  html_document: 
-    keep_md: yes
----
+# Accuracy
+Joe Willage  
+March 30, 2016  
 
-```{r, include = FALSE}
-library(knitr)
-```
 
-```{r global_options, include = FALSE}
-knitr::opts_chunk$set(fig.width = 7, fig.height = 7, fig.path='Figs/', 
-                      warning = FALSE, message = FALSE, cache = TRUE)
-```
+
+
 
 This is an exploration to achieve higher accuracy in mapping latitude and longitude to a street segment. Here a segment is defined as a section of street bounded by two other streets. The end goal is an abstracted pattern, but the motivation is to more accurately map trees in New York City to a specific block. 
 
 The previous analysis left off by stating that an answer was reached, "but how valid is it?" Some inconsistancies were noted, specifically with the block that had the highest reported TPM. Recall the graphic that went with this statement. 
 
-```{r, warning = FALSE, message = FALSE}
+
+```r
 library(ggmap)
 library(knitr)
 library(rjson)
 library(dplyr)
 ```
 
-```{r, include = FALSE}
-treeMap <- readRDS("rds/treeMap.les.rds")
-blocks.les <- readRDS("rds/blocks.corrected.les.rds")
-```
 
-```{r sewardPark}
+
+
+```r
 map.sewardPark <- get_map(location = "40.71597,-73.9889687", zoom = 17, maptype = "toner-lines")
 ggmap(map.sewardPark) + 
    geom_point(data = treeMap[treeMap$blockId == 35,],
@@ -41,11 +30,19 @@ ggmap(map.sewardPark) +
    theme_nothing()
 ```
 
+![](Figs/sewardPark-1.png) 
+
 And note that all of these trees mapped to the block of Grand b/w Clinton and Suffolk, when most actually lie on Clinton St. The southmost tree mapped to this block is the following.
 
-```{r}
+
+```r
 block.35 <- treeMap[treeMap$blockId == 35, ]
 head(block.35[order(block.35$lat), ], 1)
+```
+
+```
+##          lat       lon stumpDiam number   street   zip     id blockId
+## 1690 40.7153 -73.98717        12    410 Grand St 10002 165907      35
 ```
 
 Tree 165907 is reverse geocoded as 410 Grand, but viewing the full tree data from the Tree Map website returns the nearest address as 187 Clinton, much more accurate. This may prove to be a useful alternative.  
@@ -54,7 +51,8 @@ However, the Geonames Find Nearby Streets API provids another useful match. It's
 
 For the tree of interest, here is the result from the Geonames Find Nearby Streets call.
 
-```{r}
+
+```r
 user <- readLines("../../geonames.txt")
 nearestAddress.url <- paste0("http://api.geonames.org/findNearbyStreetsJSON?&username=", user, "&")
 nearestAddress.parms <- paste0("lat=", block.35[order(block.35$lat), ][1, "lat"], 
@@ -68,10 +66,31 @@ segments <- seg %>% t %>% as.data.frame(stringsAsFactors = FALSE) %>%
 segments[, 1:8]
 ```
 
+```
+##        Street fraddl fraddr toaddl toaddr mtfcc   zip distance
+## 1  Clinton St    166    167    184    185 S1400 10002     0.01
+## 2                                         S1710          0.035
+## 3  Clinton St    186    187    198    197 S1400 10002    0.036
+## 4  Clinton St    140    139    164    165 S1400 10002    0.082
+## 5    Grand St    408    411    424    425 S1400 10002    0.082
+## 6    Grand St    390    389    406    409 S1400 10002    0.082
+## 7                                         S1710            0.1
+## 8                                         S1780          0.101
+## 9  Suffolk St      1      2     61     62 S1400 10002    0.104
+## 10   Grand St    374    383    388    387 S1400 10002    0.104
+```
+
 This useful result set returns the to and from addresses for both sides of the street, as well as the distance from the street (which is how the results are ordered). This may be useful in validation. A final component, not included in the above table, is the coordinate line of each segment. This allows for drawing a multi-segment line on a map, another useful tool in validation. Plotting these street segments results in the following
 
-```{r}
-segments[1, "line"]
-segments$id <- seq_along(segments$Street)
 
+```r
+segments[1, "line"]
+```
+
+```
+## [1] "-73.986721 40.715952,-73.98683 40.715777,-73.986929 40.715603,-73.986996 40.715456,-73.987074 40.715241,-73.98713 40.715031,-73.987138 40.714974"
+```
+
+```r
+segments$id <- seq_along(segments$Street)
 ```
