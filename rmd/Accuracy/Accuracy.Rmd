@@ -97,7 +97,6 @@ ggmap(map.sewardPark) +
    geom_point(data = block.35[order(block.35$lat), ][1, ], aes(x = lon, y = lat), 
               size = 8, color = "red") +
    geom_text(data = means, aes(x = lon, y = lat, label = i), size = 6)
-
 ```
 
 The tree of interest is indicated by the red dot, and each returned segment is uniquely colored. 
