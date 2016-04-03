@@ -104,3 +104,20 @@ lines <- separate(lines, V2, c("lon", "lat"), " ")
 lines$lon <- as.numeric(lines$lon)
 lines$lat <- as.numeric(lines$lat)
 ```
+
+
+```r
+# relevel to separate similar color lines
+lines$i <- factor(lines$i, levels(lines$i)[c(3, 6, 7, 2, 8, 9, 1, 5, 4, 10)])
+ggmap(map.sewardPark) + 
+   geom_line(data = lines, aes(x = lon, y = lat, color = i), size = 4) +
+   theme_nothing() +
+   geom_point(data = block.35[order(block.35$lat), ][1, ], aes(x = lon, y = lat), 
+              size = 10) +
+   geom_point(data = block.35[order(block.35$lat), ][1, ], aes(x = lon, y = lat), 
+              size = 8, color = "red") 
+```
+
+![](Figs/clinton lines-1.png) 
+
+The tree of interest is indicated by the red dot, and each returned segment is uniquely colored
