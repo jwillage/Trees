@@ -76,8 +76,8 @@ segments[1, "line"]
 segments$id <- seq_along(segments$street)
 lines.list <- strsplit(segments$line, ",")
 lines <- data.frame()
-for (i in 1:length(lines.list)){
-  lines <- rbind(lines, cbind(i, lines.list[[i]]))
+for (segment in 1:length(lines.list)){
+  lines <- rbind(lines, cbind(segment, lines.list[[segment]]))
 }
 lines$V2 <- as.character(lines$V2)
 lines <- separate(lines, V2, c("lon", "lat"), " ")
@@ -87,29 +87,27 @@ lines$lat <- as.numeric(lines$lat)
 
 ```{r clinton lines}
 # relevel to separate similar color lines
-lines$i <- factor(lines$i, levels(lines$i)[c(3, 6, 7, 2, 8, 9, 1, 5, 4, 10)])
-means <- lines %>% group_by(i) %>% summarize(lat = mean(lat), lon = mean(lon))
+lines$segment <- factor(lines$segment, levels(lines$segment)[c(3, 6, 7, 2, 8, 9, 1, 5, 4, 10)])
+means <- lines %>% group_by(segment) %>% summarize(lat = mean(lat), lon = mean(lon))
 ggmap(map.sewardPark) + 
-   geom_line(data = lines, aes(x = lon, y = lat, color = i), size = 4) +
+   geom_line(data = lines, aes(x = lon, y = lat, color = segment), size = 4) +
    theme_nothing() +
    geom_point(data = block.35[order(block.35$lat), ][1, ], aes(x = lon, y = lat), 
               size = 10) +
    geom_point(data = block.35[order(block.35$lat), ][1, ], aes(x = lon, y = lat), 
               size = 8, color = "red") +
-   geom_text(data = means, aes(x = lon, y = lat, label = i), size = 6)
+   geom_text(data = means, aes(x = lon, y = lat, label = segment), size = 6)
 ```
 
 The point of interest is indicated by the red dot, and each returned segment is uniquely colored. The first segment returned is definitely the most correct: Clinton from 166 - 185. Segment 2 is not wanted, and is actually just a sidewalk from Clinton to Essex. Segment 3 is the other segment that completes this block. Segments 4 - 10 are not part of the block. **The task at hand is to create a reproducible process that groups segments 1 and 3 into a block, and eliminates the other results**.  
 
-The approach involves the Geonames Find Nearest Intersection (FNI) API. Each segment previously returned from FNB will have it's two endpoints passed into FNI. The order of rules is as follows:  
+The approach involves the Geonames Find Nearest Intersection (FNI) API. Each segment previously returned from FNS will have it's two endpoints passed into FNI. The order of rules is as follows:  
 
 1) Segments are evaluated in the order of minimal `distance` from the point. The first segment will act as the reference point. Segments may be considered to be part of the block if their `street` is the same value as that of the first segment.   
 1) A call is made to the FNI API using the segment's first and last coordinates.  
-1) Segments with distinct intersections are possible complete blocks. Skip next step.
-1) Segments which return the same intersection for both endpoints are marked as incomplete. The endpoint with the least `distance` to the intersection is considered for a potential block-end.  
-2) Endpoints that are within X `distance` of their nearest intersection are marked as a block end. X is close to 0.     
-2) Mark block as complete if it has two block ends. 
-3) If block is incomplete, repeat for remaining segments.   
+2) Endpoints that are within X `distance` of their nearest intersection are marked as a block end. X is close to 0.
+2) If block has two ends, exit the process.  
+3) If block has less than two ends, repeat for remaining segments.   
 
 An example with the previous data is as follows:  
 Segment 1 is the reference point and an FNI call is made with each of it's endpoints. The results are distinct. The distance of first endpoint is 0. The distance of the second endpoint is 0.7. Endpoint 1 is added as a block end. The block is still incomplete, process next segment. 
@@ -120,51 +118,42 @@ Segment 3 has a matching street name, "Clinton St". The FNI calls are made for b
 
 The entire process looks as follows:  
 
-```{r}
+```{r single block}
 blocks <- data.frame()
+tmpBlock <- data.frame()
 fni.url <- paste0("http://api.geonames.org/findNearestIntersectionJSON?&username=", user, "&")
-fni.parms1 <- paste0("lat=", lines[lines$i == 1, "lat"][1], 
-                     "&lng=", lines[lines$i == 1, "lon"][1])
-int1 <- fromJSON(file = paste0(fni.url, fni.parms1))
-fni.parms2 <- paste0("lat=", tail(lines[lines$i == 1, "lat"], 1), 
-                     "&lng=", tail(lines[lines$i == 1, "lon"], 1))
-int2 <- fromJSON(file = paste0(fni.url, fni.parms2))
-if (int1$intersection$street1 == int2$intersection$street1 & 
-    int1$intersection$street2 == int2$intersection$street2) {
-  if (int1$intersection$distance == min(int1$intersection$distance, int2$intersection$distance)) {
-    if (int1$intersection$distance < 0.001) {
-      rbind(blocks, 
-            c(length(blocks$id) + 1, int1$intersection$street1, int1$intersection$street2,
-              int1$intersection$lat, int1$intersection$lng))
-    } else{ }
-  } else{
-      if (int2$intersection$distance < 0.001) {
-      rbind(blocks, 
-            c(length(blocks$id) + 1, int2$intersection$street1, int2$intersection$street2,
-              int2$intersection$lat, int2$intersection$lng))
-    } else { }
+for (i in 1 : nrow(segments)) {
+  if (segments[i, "street"] != segments[1, "street"]) {
+    next
   }
-    
-} else{
-  # TODO repeat for case int1 != int2
+  fni.parms1 <- paste0("lat=", lines[lines$segment == i, "lat"][1], 
+                       "&lng=", lines[lines$segment == i, "lon"][1])
+  int1 <- fromJSON(file = paste0(fni.url, fni.parms1))
+  fni.parms2 <- paste0("lat=", tail(lines[lines$segment == i, "lat"], 1), 
+                       "&lng=", tail(lines[lines$segment == i, "lon"], 1))
+  int2 <- fromJSON(file = paste0(fni.url, fni.parms2))
+
+  if (int1$intersection$distance < 0.001) {
+    tmpBlock <- rbind(tmpBlock, 
+                      data.frame(i, street1 = int1$intersection$street1, 
+                                 street2 = int1$intersection$street2,
+                                 lat = int1$intersection$lat, lon = int1$intersection$lng, 
+                                 stringsAsFactors = FALSE))
+  } 
+  if (int2$intersection$distance < 0.001) {
+    tmpBlock <- rbind(tmpBlock, 
+                      data.frame(i, street1 = int2$intersection$street1, 
+                                 street2 = int2$intersection$street2,
+                                 lat = int2$intersection$lat, lon = int2$intersection$lng, 
+                                 stringsAsFactors = FALSE))
+  } 
+  if (nrow(tmpBlock) >= 2) {
+    # TODO cast to a single row
+    blocks <- rbind(blocks, tmpBlock)
+    break
+  }
 }
+
+blocks
 ```
 
-The first endpoint of the segment is indeed on the intersection. But the other endpoint has distance > 0. 
-
-```{r}
-blocks <- rbind(blocks, 
-                c(length(blocks$id) + 1, int1$intersection$street1, int1$intersection$street2,
-                  int1$intersection$lat, int1$intersection$lng))
-names(blocks) <- c("id", "street1", "street2", "lat", "lon")
-```
-
-Check if the block can be marked as complete.   
-#TODO how to identify blocks. Consider a temp object where all block ends (1 or 2) are part of the POI
-
-
-```{r}
-if (nrow(blocks[blocks$id == 1, ]) == 2) {
-  blocks[blocks$id == 1, "complete"] <- TRUE
-}
-```
