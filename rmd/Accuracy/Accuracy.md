@@ -192,3 +192,110 @@ blocks
 ## 1              3    E Broadway   40.71431 -73.987165
 ```
 
+The method works well for a single point. The next challenge is iterating through a list of points, checking if they belong to an existing block or if a new block needs to be created. With this process, the FNS API is called for each point and a matching blocks is found. This ensures **accuracy**. A less expensive approach may be to create for each block a polygon (ie thin rectangle) and check if the point lies within. 
+
+
+```r
+getSegments <- function(lat, lon) {
+  fns.parms <- paste0("lat=", lat, "&lng=", lon)
+  seg <- fromJSON(file = paste0(fns.url, fns.parms))
+  seg <- sapply(seg$streetSegment, function(i) c(i$name, i$fraddl, i$fraddr, i$toaddl, i$toaddr, 
+                                                i$mtfcc, i$zip, i$postalcode, i$distance, i$line))
+  segments <- seg %>% t %>% as.data.frame(stringsAsFactors = FALSE) %>% 
+              setNames(c("street",	"fraddl", "fraddr",	"toaddl", "toaddr",	 "mtfcc",	"zip", 
+                         "distance", "line"))
+  # grab first and last coordinate for each segment
+  segments[, c("coord1", "coord2")] <- t(sapply(strsplit(segments$line, ","), 
+                                                function(z) c(z[1], z[length(z)])))
+  segments <- segments %>% separate(coord1, c("lon1", "lat1"), " ") %>% 
+              separate(coord2, c("lon2", "lat2"), " ") 
+  segments$id <- seq_along(segments$street)
+  segments[, c(1:8, 10:14)]
+} 
+```
+
+A `getSegments` function is broken out to find all the nearest segments to a given point. The code to grab the beginning and ending coordinates for a segment is streamlined in an sapply statement. The complete lines are disgarded, as can be seen by the absence of column 9 in the final statement.  
+
+Iterating through the list of trees will look as follows.  
+
+
+```r
+# seed blocks table with correct data types
+blocks <- data.frame(id = 1, primary.street = "Clinton St", cross1.segment = 1, 
+                     cross1.street = "E Broadway", cross1.lat = "40.715952", 
+                     cross1.lon = "-73.986721", cross2.segment = 1, cross2.street = "Grand St",
+                     cross2.lat = "40.715952", cross2.lon = "-73.986721", count = 0, 
+                     stringsAsFactors = FALSE)
+for (tree in 1:5) {
+  segments <- getSegments(treeMap[tree, "lat"], treeMap[tree, "lon"])
+  primary <- segments[1, "street"]
+  tmpBlock <- data.frame()
+  for (segment in 1 : nrow(segments)) {
+    if (segments[segment, "street"] != primary) {
+      next
+    }
+    fni.parms1 <- paste0("lat=", segments[segment, "lat1"], 
+                         "&lng=", segments[segment, "lon1"])
+    int1 <- fromJSON(file = paste0(fni.url, fni.parms1))
+    fni.parms2 <- paste0("lat=", segments[segment, "lat2"], 
+                         "&lng=", segments[segment, "lon2"])
+    int2 <- fromJSON(file = paste0(fni.url, fni.parms2))
+  
+    if (int1$intersection$distance < 0.001) {
+      streets <- c(int1$intersection$street1, int1$intersection$street2)
+      street <- streets[streets != primary]
+      tmpBlock <- rbind(tmpBlock, 
+                        data.frame(segment, street = street,
+                                   lat = int1$intersection$lat, lon = int1$intersection$lng, 
+                                   stringsAsFactors = FALSE))
+    } 
+    if (int2$intersection$distance < 0.001) {
+      streets <- c(int2$intersection$street1, int2$intersection$street2)
+      street <- streets[streets != primary]
+      tmpBlock <- rbind(tmpBlock, 
+                        data.frame(segment, street = street,
+                                   lat = int2$intersection$lat, lon = int2$intersection$lng, 
+                                   stringsAsFactors = FALSE))
+    } 
+     if (nrow(tmpBlock) >= 2) {
+       minStreet <- which(tmpBlock$street == min(tmpBlock$street))
+       tmpBlock <- cbind(tmpBlock[minStreet, ], tmpBlock[-minStreet, ])
+       names(tmpBlock) <- c("cross1.segment", "cross1.street", "cross1.lat", "cross1.lon",
+                            "cross2.segment", "cross2.street", "cross2.lat", "cross2.lon")
+       break
+     }
+  }
+  # compare to existing blocks
+  x <- inner_join(tmpBlock, blocks, 
+                  by = c("cross1.lat" = "cross1.lat", "cross1.lon" = "cross1.lon",
+                         "cross2.lat" = "cross2.lat", "cross2.lon" = "cross2.lon"))
+  if (nrow(x) > 0) {
+    # block exists
+    blocks[blocks$id == x$id, "count"] <- blocks[blocks$id == x$id, "count"] + 1
+    treeMap$blockId <- blocks[blocks$id == x$id, "id"]
+  } else{
+    blocks <- rbind(blocks, 
+                    cbind(id = nrow(blocks) + 1, primary.street = primary, tmpBlock, count = 1))
+    treeMap$blockId <- nrow(blocks)
+  }
+}
+
+head(blocks)
+```
+
+```
+##    id primary.street cross1.segment cross1.street cross1.lat cross1.lon
+## 1   1     Clinton St              1    E Broadway  40.715952 -73.986721
+## 2   2   Elizabeth St              1  E Houston St  40.724433 -73.993458
+## 3   3      Baruch Pl              1  E Houston St  40.719133 -73.976355
+## 21  4       Grand St              1      Allen St  40.717418 -73.991422
+## 22  5     Suffolk St              1  E Houston St   40.72173 -73.984678
+## 23  6        Pitt St              1     Broome St  40.716115 -73.983619
+##    cross2.segment cross2.street cross2.lat cross2.lon count
+## 1               1      Grand St  40.715952 -73.986721     0
+## 2               1     Prince St  40.722723 -73.994153     1
+## 3               1     Mangin St   40.71787 -73.976027     1
+## 21              1   Eldridge St  40.717658  -73.99222     1
+## 22              1    Stanton St  40.720489 -73.985319     1
+## 23              1      Grand St   40.71521 -73.984258     1
+```

@@ -180,6 +180,72 @@ getSegments <- function(lat, lon) {
   segments$id <- seq_along(segments$street)
   segments[, c(1:8, 10:14)]
 } 
+```
 
+A `getSegments` function is broken out to find all the nearest segments to a given point. The code to grab the beginning and ending coordinates for a segment is streamlined in an sapply statement. The complete lines are disgarded, as can be seen by the absence of column 9 in the final statement.  
 
+Iterating through the list of trees will look as follows.  
+
+```{r}
+# seed blocks table with correct data types
+blocks <- data.frame(id = 1, primary.street = "Clinton St", cross1.segment = 1, 
+                     cross1.street = "E Broadway", cross1.lat = "40.715952", 
+                     cross1.lon = "-73.986721", cross2.segment = 1, cross2.street = "Grand St",
+                     cross2.lat = "40.715952", cross2.lon = "-73.986721", count = 0, 
+                     stringsAsFactors = FALSE)
+for (tree in 1:nrow(treeMap)) {
+  segments <- getSegments(treeMap[tree, "lat"], treeMap[tree, "lon"])
+  primary <- segments[1, "street"]
+  tmpBlock <- data.frame()
+  for (segment in 1 : nrow(segments)) {
+    if (segments[segment, "street"] != primary) {
+      next
+    }
+    fni.parms1 <- paste0("lat=", segments[segment, "lat1"], 
+                         "&lng=", segments[segment, "lon1"])
+    int1 <- fromJSON(file = paste0(fni.url, fni.parms1))
+    fni.parms2 <- paste0("lat=", segments[segment, "lat2"], 
+                         "&lng=", segments[segment, "lon2"])
+    int2 <- fromJSON(file = paste0(fni.url, fni.parms2))
+  
+    if (int1$intersection$distance < 0.001) {
+      streets <- c(int1$intersection$street1, int1$intersection$street2)
+      street <- streets[streets != primary]
+      tmpBlock <- rbind(tmpBlock, 
+                        data.frame(segment, street = street,
+                                   lat = int1$intersection$lat, lon = int1$intersection$lng, 
+                                   stringsAsFactors = FALSE))
+    } 
+    if (int2$intersection$distance < 0.001) {
+      streets <- c(int2$intersection$street1, int2$intersection$street2)
+      street <- streets[streets != primary]
+      tmpBlock <- rbind(tmpBlock, 
+                        data.frame(segment, street = street,
+                                   lat = int2$intersection$lat, lon = int2$intersection$lng, 
+                                   stringsAsFactors = FALSE))
+    } 
+     if (nrow(tmpBlock) >= 2) {
+       minStreet <- which(tmpBlock$street == min(tmpBlock$street))
+       tmpBlock <- cbind(tmpBlock[minStreet, ], tmpBlock[-minStreet, ])
+       names(tmpBlock) <- c("cross1.segment", "cross1.street", "cross1.lat", "cross1.lon",
+                            "cross2.segment", "cross2.street", "cross2.lat", "cross2.lon")
+       break
+     }
+  }
+  # compare to existing blocks
+  x <- inner_join(tmpBlock, blocks, 
+                  by = c("cross1.lat" = "cross1.lat", "cross1.lon" = "cross1.lon",
+                         "cross2.lat" = "cross2.lat", "cross2.lon" = "cross2.lon"))
+  if (nrow(x) > 0) {
+    # block exists
+    blocks[blocks$id == x$id, "count"] <- blocks[blocks$id == x$id, "count"] + 1
+    treeMap$blockId <- blocks[blocks$id == x$id, "id"]
+  } else{
+    blocks <- rbind(blocks, 
+                    cbind(id = nrow(blocks) + 1, primary.street = primary, tmpBlock, count = 1))
+    treeMap$blockId <- nrow(blocks)
+  }
+}
+
+head(blocks)
 ```
