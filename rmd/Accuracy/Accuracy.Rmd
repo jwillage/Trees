@@ -161,3 +161,25 @@ names(blocks) <- c("id", "primary.street", "cross1.segment", "cross1.street", "c
 blocks
 ```
 
+The method works well for a single point. The next challenge is iterating through a list of points, checking if they belong to an existing block or if a new block needs to be created. With this process, the FNS API is called for each point and a matching blocks is found. This ensures **accuracy**. A less expensive approach may be to create for each block a polygon (ie thin rectangle) and check if the point lies within. 
+
+```{r}
+getSegments <- function(lat, lon) {
+  fns.parms <- paste0("lat=", lat, "&lng=", lon)
+  seg <- fromJSON(file = paste0(fns.url, fns.parms))
+  seg <- sapply(seg$streetSegment, function(i) c(i$name, i$fraddl, i$fraddr, i$toaddl, i$toaddr, 
+                                                i$mtfcc, i$zip, i$postalcode, i$distance, i$line))
+  segments <- seg %>% t %>% as.data.frame(stringsAsFactors = FALSE) %>% 
+              setNames(c("street",	"fraddl", "fraddr",	"toaddl", "toaddr",	 "mtfcc",	"zip", 
+                         "distance", "line"))
+  # grab first and last coordinate for each segment
+  segments[, c("coord1", "coord2")] <- t(sapply(strsplit(segments$line, ","), 
+                                                function(z) c(z[1], z[length(z)])))
+  segments <- segments %>% separate(coord1, c("lon1", "lat1"), " ") %>% 
+              separate(coord2, c("lon2", "lat2"), " ") 
+  segments$id <- seq_along(segments$street)
+  segments[, c(1:8, 10:14)]
+} 
+
+
+```
