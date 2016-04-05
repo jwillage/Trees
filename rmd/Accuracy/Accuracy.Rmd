@@ -122,38 +122,42 @@ The entire process looks as follows:
 blocks <- data.frame()
 tmpBlock <- data.frame()
 fni.url <- paste0("http://api.geonames.org/findNearestIntersectionJSON?&username=", user, "&")
-for (i in 1 : nrow(segments)) {
-  if (segments[i, "street"] != segments[1, "street"]) {
+for (segment in 1 : nrow(segments)) {
+  primary <- segments[1, "street"]
+  if (segments[segment, "street"] != primary) {
     next
   }
-  fni.parms1 <- paste0("lat=", lines[lines$segment == i, "lat"][1], 
-                       "&lng=", lines[lines$segment == i, "lon"][1])
+  fni.parms1 <- paste0("lat=", lines[lines$segment == segment, "lat"][1], 
+                       "&lng=", lines[lines$segment == segment, "lon"][1])
   int1 <- fromJSON(file = paste0(fni.url, fni.parms1))
-  fni.parms2 <- paste0("lat=", tail(lines[lines$segment == i, "lat"], 1), 
-                       "&lng=", tail(lines[lines$segment == i, "lon"], 1))
+  fni.parms2 <- paste0("lat=", tail(lines[lines$segment == segment, "lat"], 1), 
+                       "&lng=", tail(lines[lines$segment == segment, "lon"], 1))
   int2 <- fromJSON(file = paste0(fni.url, fni.parms2))
 
   if (int1$intersection$distance < 0.001) {
+    streets <- c(int1$intersection$street1, int1$intersection$street2)
+    street <- streets[streets != primary]
     tmpBlock <- rbind(tmpBlock, 
-                      data.frame(i, street1 = int1$intersection$street1, 
-                                 street2 = int1$intersection$street2,
+                      data.frame(segment, street = street,
                                  lat = int1$intersection$lat, lon = int1$intersection$lng, 
                                  stringsAsFactors = FALSE))
   } 
   if (int2$intersection$distance < 0.001) {
+    streets <- c(int2$intersection$street1, int2$intersection$street2)
+    street <- streets[streets != primary]
     tmpBlock <- rbind(tmpBlock, 
-                      data.frame(i, street1 = int2$intersection$street1, 
-                                 street2 = int2$intersection$street2,
+                      data.frame(segment, street = street,
                                  lat = int2$intersection$lat, lon = int2$intersection$lng, 
                                  stringsAsFactors = FALSE))
   } 
   if (nrow(tmpBlock) >= 2) {
-    # TODO cast to a single row
-    blocks <- rbind(blocks, tmpBlock)
+    blocks <- rbind(blocks, cbind(nrow(blocks) + 1, primary, tmpBlock[1, ], tmpBlock[2, ]))
     break
   }
 }
 
+names(blocks) <- c("id", "primary.street", "cross1.segment", "cross1.street", "cross1.lat",
+                   "cross1.lon", "cross2.segment", "cross2.street", "cross2.lat", "cross2.lon")
 blocks
 ```
 
