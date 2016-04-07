@@ -77,8 +77,8 @@ segments[, 1:8]
 ## 6    Grand St    390    389    406    409 S1400 10002    0.082
 ## 7                                         S1710            0.1
 ## 8                                         S1780            0.1
-## 9    Grand St    374    383    388    387 S1400 10002    0.104
-## 10 Suffolk St      1      2     61     62 S1400 10002    0.104
+## 9  Suffolk St      1      2     61     62 S1400 10002    0.104
+## 10   Grand St    374    383    388    387 S1400 10002    0.104
 ```
 
 This useful result set returns the to and from addresses for both sides of the street, as well as the distance from the street (which is how the results are ordered). This may be useful in validation. A final component, not included in the above table, is the coordinate line of each segment. This allows for drawing a multi-segment line on a map, another useful tool in validation. Plotting these street segments results in the following
@@ -226,7 +226,10 @@ blocks <- data.frame(id = 1, primary.street = "Clinton St", cross1.segment = 1,
                      cross1.lon = "-73.986721", cross2.segment = 1, cross2.street = "Grand St",
                      cross2.lat = "40.715952", cross2.lon = "-73.986721", count = 0, 
                      stringsAsFactors = FALSE)
-for (tree in 1:5) {
+err <- NULL
+tmpBlock <- NULL
+treeMap$blockId <- NULL
+for (tree in 1:661) { #nrow(treeMap)
   segments <- getSegments(treeMap[tree, "lat"], treeMap[tree, "lon"])
   primary <- segments[1, "street"]
   tmpBlock <- data.frame()
@@ -257,45 +260,82 @@ for (tree in 1:5) {
                                    lat = int2$intersection$lat, lon = int2$intersection$lng, 
                                    stringsAsFactors = FALSE))
     } 
-     if (nrow(tmpBlock) >= 2) {
+     if (nrow(tmpBlock) == 2) {
        minStreet <- which(tmpBlock$street == min(tmpBlock$street))
        tmpBlock <- cbind(tmpBlock[minStreet, ], tmpBlock[-minStreet, ])
        names(tmpBlock) <- c("cross1.segment", "cross1.street", "cross1.lat", "cross1.lon",
                             "cross2.segment", "cross2.street", "cross2.lat", "cross2.lon")
        break
+     } else if (nrow(tmpBlock) > 2) {
+       # error caught in the below null check
+       tmpBlock <- NULL
+       break
      }
   }
-  # compare to existing blocks
+  if (is.null(tmpBlock$cross1.segment) | is.null(tmpBlock$cross2.segment)) {
+    # 2 endpoints were not found in the list of segments
+    err <<- c(err, tree)
+    tmpBlock <- NULL
+    next
+  }
   x <- inner_join(tmpBlock, blocks, 
                   by = c("cross1.lat" = "cross1.lat", "cross1.lon" = "cross1.lon",
                          "cross2.lat" = "cross2.lat", "cross2.lon" = "cross2.lon"))
   if (nrow(x) > 0) {
     # block exists
     blocks[blocks$id == x$id, "count"] <- blocks[blocks$id == x$id, "count"] + 1
-    treeMap$blockId <- blocks[blocks$id == x$id, "id"]
+    treeMap[tree, "blockId"] <- blocks[blocks$id == x$id, "id"]
   } else{
     blocks <- rbind(blocks, 
                     cbind(id = nrow(blocks) + 1, primary.street = primary, tmpBlock, count = 1))
-    treeMap$blockId <- nrow(blocks)
+    treeMap[tree, "blockId"] <- nrow(blocks)
   }
 }
-
-head(blocks)
 ```
 
+Most of the points are successfully mapped to blocks. There are a few errors, such as the following, the segments related to point 662.  
+
+
+
+
+```r
+wburgBridge <- get_map(location = "40.7169942,-73.9859083", zoom = 17, maptype = "toner-lines")
+ggmap(wburgBridge) +
+  geom_line(data = segment.662, aes(x = lon, y = lat, color = segment), size = 4) +
+  theme_nothing() +
+  geom_point(data = treeMap[662, ], aes(x = lon, y = lat), size = 10) + 
+  geom_point(data =treeMap[662, ], aes(x = lon, y = lat), size = 8, color = "red") +
+  geom_text(data = means, aes(x = lon, y = lat, label = segment), size = 6)
 ```
-##    id primary.street cross1.segment cross1.street cross1.lat cross1.lon
-## 1   1     Clinton St              1    E Broadway  40.715952 -73.986721
-## 2   2   Elizabeth St              1  E Houston St  40.724433 -73.993458
-## 3   3      Baruch Pl              1  E Houston St  40.719133 -73.976355
-## 21  4       Grand St              1      Allen St  40.717418 -73.991422
-## 22  5     Suffolk St              1  E Houston St   40.72173 -73.984678
-## 23  6        Pitt St              1     Broome St  40.716115 -73.983619
-##    cross2.segment cross2.street cross2.lat cross2.lon count
-## 1               1      Grand St  40.715952 -73.986721     0
-## 2               1     Prince St  40.722723 -73.994153     1
-## 3               1     Mangin St   40.71787 -73.976027     1
-## 21              1   Eldridge St  40.717658  -73.99222     1
-## 22              1    Stanton St  40.720489 -73.985319     1
-## 23              1      Grand St   40.71521 -73.984258     1
+
+![](Figs/wburg bridge-1.png) 
+
+The point is located on Delancey St b/w Clinton and Ridge. However, the segments returned by the FNS API do not form the complete block. Segment 1 accurately forms part of the block, but the portion closest to Ridge is missing. Even with the radius set to the max of 1 km, no additional segments are returned. In this case, the above loop threw an error because both block ends have the same name (`minStreet` is comprised of 2 values so the `cbind` fails). Error-checking for this stype of situation can be included, but ultimately the block has to be added manually.  
+
+Point 662 actually halted execution, but errors were also captured in cases where 2 endpoints were not found.  
+
+
+```r
+length(err)
 ```
+
+```
+## [1] 33
+```
+
+```r
+errTable <- table(treeMap[err, "street"])
+errTable
+```
+
+```
+## 
+##  Attorney St     Avenue D       Bowery     Canal St  Chrystie St 
+##            1            3            2            2            1 
+##   Clinton St     E 2nd St     E 4th St     E 5th St E Houston St 
+##            5            1            2           11            3 
+##     Essex St   Stanton St 
+##            1            1
+```
+
+Out of the 33 errors recorded, the majority are on E 5th St. Looking at the data, those points lie on a dead-end street which indeed has only a single intersection. How can that be recorded in the data? 

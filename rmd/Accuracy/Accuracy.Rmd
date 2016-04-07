@@ -186,14 +186,17 @@ A `getSegments` function is broken out to find all the nearest segments to a giv
 
 Iterating through the list of trees will look as follows.  
 
-```{r}
+```{r mapping loop}
 # seed blocks table with correct data types
 blocks <- data.frame(id = 1, primary.street = "Clinton St", cross1.segment = 1, 
                      cross1.street = "E Broadway", cross1.lat = "40.715952", 
                      cross1.lon = "-73.986721", cross2.segment = 1, cross2.street = "Grand St",
                      cross2.lat = "40.715952", cross2.lon = "-73.986721", count = 0, 
                      stringsAsFactors = FALSE)
-for (tree in 1:nrow(treeMap)) {
+err <- NULL
+tmpBlock <- NULL
+treeMap$blockId <- NULL
+for (tree in 1:661) { #nrow(treeMap)
   segments <- getSegments(treeMap[tree, "lat"], treeMap[tree, "lon"])
   primary <- segments[1, "street"]
   tmpBlock <- data.frame()
@@ -224,28 +227,64 @@ for (tree in 1:nrow(treeMap)) {
                                    lat = int2$intersection$lat, lon = int2$intersection$lng, 
                                    stringsAsFactors = FALSE))
     } 
-     if (nrow(tmpBlock) >= 2) {
+     if (nrow(tmpBlock) == 2) {
        minStreet <- which(tmpBlock$street == min(tmpBlock$street))
        tmpBlock <- cbind(tmpBlock[minStreet, ], tmpBlock[-minStreet, ])
        names(tmpBlock) <- c("cross1.segment", "cross1.street", "cross1.lat", "cross1.lon",
                             "cross2.segment", "cross2.street", "cross2.lat", "cross2.lon")
        break
+     } else if (nrow(tmpBlock) > 2) {
+       # error caught in the below null check
+       tmpBlock <- NULL
+       break
      }
   }
-  # compare to existing blocks
+  if (is.null(tmpBlock$cross1.segment) | is.null(tmpBlock$cross2.segment)) {
+    # 2 endpoints were not found in the list of segments
+    err <<- c(err, tree)
+    tmpBlock <- NULL
+    next
+  }
   x <- inner_join(tmpBlock, blocks, 
                   by = c("cross1.lat" = "cross1.lat", "cross1.lon" = "cross1.lon",
                          "cross2.lat" = "cross2.lat", "cross2.lon" = "cross2.lon"))
   if (nrow(x) > 0) {
     # block exists
     blocks[blocks$id == x$id, "count"] <- blocks[blocks$id == x$id, "count"] + 1
-    treeMap$blockId <- blocks[blocks$id == x$id, "id"]
+    treeMap[tree, "blockId"] <- blocks[blocks$id == x$id, "id"]
   } else{
     blocks <- rbind(blocks, 
                     cbind(id = nrow(blocks) + 1, primary.street = primary, tmpBlock, count = 1))
-    treeMap$blockId <- nrow(blocks)
+    treeMap[tree, "blockId"] <- nrow(blocks)
   }
 }
-
-head(blocks)
 ```
+
+Most of the points are successfully mapped to blocks. There are a few errors, such as the following, the segments related to point 662.  
+
+```{r, include = FALSE}
+segment.662 <- readRDS("rds/point662.segment.rds")
+means <- segment.662 %>% group_by(segment) %>% summarize(lat = mean(lat), lon = mean(lon))
+```
+
+```{r wburg bridge}
+wburgBridge <- get_map(location = "40.7169942,-73.9859083", zoom = 17, maptype = "toner-lines")
+ggmap(wburgBridge) +
+  geom_line(data = segment.662, aes(x = lon, y = lat, color = segment), size = 4) +
+  theme_nothing() +
+  geom_point(data = treeMap[662, ], aes(x = lon, y = lat), size = 10) + 
+  geom_point(data =treeMap[662, ], aes(x = lon, y = lat), size = 8, color = "red") +
+  geom_text(data = means, aes(x = lon, y = lat, label = segment), size = 6)
+```
+
+The point is located on Delancey St b/w Clinton and Ridge. However, the segments returned by the FNS API do not form the complete block. Segment 1 accurately forms part of the block, but the portion closest to Ridge is missing. Even with the radius set to the max of 1 km, no additional segments are returned. In this case, the above loop threw an error because both block ends have the same name (`minStreet` is comprised of 2 values so the `cbind` fails). Error-checking for this stype of situation can be included, but ultimately the block has to be added manually.  
+
+Point 662 actually halted execution, but errors were also captured in cases where 2 endpoints were not found.  
+
+```{r}
+length(err)
+errTable <- table(treeMap[err, "street"])
+errTable
+```
+
+Out of the `r length(err)` errors recorded, the majority are on `r names(errTable[errTable == max(errTable)])`. Looking at the data, those points lie on a dead-end street which indeed has only a single intersection. How can that be recorded in the data? 
