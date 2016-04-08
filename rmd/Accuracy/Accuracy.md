@@ -393,4 +393,72 @@ getStreet <- function(primary, intersection) {
 
 
 
+That method accounts for many of the errors. 
+
+
+```r
+blocks[grepl("&", blocks$cross1.street) | grepl("&", blocks$cross2.street), ]
+```
+
+```
+##      id primary.street cross1.segment                  cross1.street
+## 271  27      Peretz Sq              1        E Houston St & Allen St
+## 224  53     Clinton St              2 Delancey St & Williamsburg Brg
+## 232  76   E Houston St              1            Columbia St & Ave D
+## 129 129    Division St              1                       Canal St
+## 157 157   E Houston St              1            Columbia St & Ave D
+##     cross1.lat cross1.lon cross2.segment         cross2.street cross2.lat
+## 271  40.722933 -73.988643              1            Orchard St  40.722697
+## 224  40.717862  -73.98569              1          Rivington St  40.719083
+## 232  40.719934  -73.97875              1            Sheriff St  40.720235
+## 129  40.714554 -73.990755              1 Essex St & Rutgers St   40.71466
+## 157  40.719934 -73.978753              1       Lillian Wald Dr   40.71931
+##     cross2.lon count
+## 271 -73.987865     2
+## 224  -73.98507     1
+## 232 -73.979735     1
+## 129   -73.9902     1
+## 157 -73.977224     4
+```
+
+```r
+sum(blocks[grepl("&", blocks$cross1.street) | grepl("&", blocks$cross2.street), "count"])
+```
+
+```
+## [1] 9
+```
+
+And the catch-all group includes only 21 points. 
+
+
+```r
+treeMap[err, ]
+```
+
+```
+##          lat       lon stumpDiam number       street   zip     id blockId
+## 67  40.72327 -73.98077        12    620     E 5th St 10009 218687      NA
+## 68  40.72313 -73.98045        18    637     E 5th St 10009 223068      NA
+## 69  40.72323 -73.98069        17    620     E 5th St 10009 223778      NA
+## 70  40.72310 -73.98037        14    637     E 5th St 10009 225225      NA
+## 73  40.72333 -73.98093        14    629     E 5th St 10009 242957      NA
+## 74  40.72320 -73.98061        11    620     E 5th St 10009 264930      NA
+## 173 40.72320 -73.98035        12    637     E 5th St 10009 219372      NA
+## 187 40.71968 -73.98373         2    141  Attorney St 10002 225245      NA
+## 209 40.71595 -73.99517         3    125     Canal St 10002 235508      NA
+## 210 40.72328 -73.97643         4     93     Avenue D 10009 235530      NA
+## 269 40.71879 -73.98516         2     78   Clinton St 10002 276493      NA
+## 288 40.71615 -73.98933        15     41     Essex St 10002 110735      NA
+## 386 40.72343 -73.98278         3    238     E 4th St 10009 233386      NA
+## 412 40.71959 -73.97671         3    525 E Houston St 10002 238741      NA
+## 419 40.72225 -73.97651        10     77     Avenue D 10009 241059      NA
+## 462 40.72335 -73.98285         3    238     E 4th St 10009 255640      NA
+## 464 40.72313 -73.98019        10    637     E 5th St 10009 255988      NA
+## 516 40.72323 -73.98043        12    637     E 5th St 10009 271857      NA
+## 544 40.72233 -73.97635         2     77     Avenue D 10009 277632      NA
+## 616 40.72340 -73.98083        12    629     E 5th St 10009 215925      NA
+## 628 40.72337 -73.98076        10    629     E 5th St 10009 244803      NA
+```
+
 A similar method needs to be implemented to handle the Delancey St error. 

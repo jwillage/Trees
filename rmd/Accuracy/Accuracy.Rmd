@@ -353,7 +353,7 @@ blocks <- data.frame(id = 1, primary.street = "Clinton St", cross1.segment = 1,
 err <- NULL
 tmpBlock <- NULL
 treeMap$blockId <- NULL
-for (tree in 1:661) { #nrow(treeMap)
+for (tree in 662:nrow(treeMap)) { #nrow(treeMap)
   segments <- getSegments(treeMap[tree, "lat"], treeMap[tree, "lon"])
   primary <- segments[1, "street"]
   tmpBlock <- data.frame()
@@ -386,6 +386,7 @@ for (tree in 1:661) { #nrow(treeMap)
                                    stringsAsFactors = FALSE))
     } 
     if (nrow(tmpBlock) > 2) {
+      print(paste("segment ", segment))
       # error state with incomplete segments. Use primary segment for full block
        tmpBlock <- rbind(data.frame(1, street = getStreet(primary, primary.int1$intersection),
                                     lat = int1$intersection$lat, lon = int1$intersection$lng, 
@@ -396,7 +397,11 @@ for (tree in 1:661) { #nrow(treeMap)
      }
      if (nrow(tmpBlock) == 2) {
        minStreet <- which(tmpBlock$street == min(tmpBlock$street))
-       tmpBlock <- cbind(tmpBlock[minStreet, ], tmpBlock[-minStreet, ])
+       if (length(minStreet) > 1) {
+         tmpBlock <- cbind(tmpBlock[1, ], "NA", "NA", "NA", "NA")
+       } else{
+         tmpBlock <- cbind(tmpBlock[minStreet, ], tmpBlock[-minStreet, ])
+       }
        names(tmpBlock) <- c("cross1.segment", "cross1.street", "cross1.lat", "cross1.lon",
                             "cross2.segment", "cross2.street", "cross2.lat", "cross2.lon")
        break
@@ -422,4 +427,20 @@ for (tree in 1:661) { #nrow(treeMap)
 }
 ```
 
-A similar method needs to be implemented to handle the Delancey St error. 
+That method accounts for many of the errors. 
+
+```{r}
+blocks[grepl("&", blocks$cross1.street) | grepl("&", blocks$cross2.street), ]
+sum(blocks[grepl("&", blocks$cross1.street) | grepl("&", blocks$cross2.street), "count"])
+```
+
+And the catch-all group includes only `r length(err)` points. The first one looks like this. 
+
+```{r}
+treeMap[err, ]
+drawLines(treeMap[err[1], "lat"], treeMap[err[1], "lon"])
+```
+
+Here, even the map layer fails to capture the actual streets. The first 2 error points lie on Lillian Wald Dr, a block that actually loops around PS 188. Those streets are made up of segments 1, 7, and a segment between 7 and the middle of 9. An accurate row for these points would have primary street as Lillian Wald Dr, and both cross streets as E Houston St. 
+
+Save blocks/treeMaps.1967 and read from them and plug the # errors in from that.
