@@ -50,7 +50,7 @@ Tree 165907 is reverse geocoded as 410 Grand, but viewing the full tree data fro
 
 However, the Geonames Find Nearby Streets (FNS) API provids another useful match. It's not the exact address that's needed for any tree, it's just the nearest street. In fact, that API provides not only the nearest street, but also the to/from addresses of the segment. A takeaway from the first analysis is that mixing and matching geocoding services gets messy. In attempt to minimize error, only the Geonames family of APIs will be used.  
 
-For the tree of interest, here is the result from the Geonames Find Nearby Streets call.
+For the point of interest, here is the result from the Geonames Find Nearby Streets call.
 
 
 ```r
@@ -81,46 +81,45 @@ segments[, 1:8]
 ## 10   Grand St    374    383    388    387 S1400 10002    0.104
 ```
 
-This useful result set returns the to and from addresses for both sides of the street, as well as the distance from the street (which is how the results are ordered). This may be useful in validation. A final component, not included in the above table, is the coordinate line of each segment. This allows for drawing a multi-segment line on a map, another useful tool in validation. Plotting these street segments results in the following
+This useful result set returns the to and from addresses for both sides of the street, as well as the distance from the street (which is how the results are ordered). This may be useful in validation down the line. A final component, not included in the above table, are the coordinate lines of each segment. This allows for drawing a multi-point segment on a map, another useful tool in validation. Plotting these street segments results in the following
 
 
 ```r
-segments[1, "line"]
-```
-
-```
-## [1] "-73.986721 40.715952,-73.986835 40.715777,-73.986929 40.715603,-73.986996 40.715456,-73.987074 40.715241,-73.987129 40.715031,-73.987138 40.714974"
-```
-
-```r
-segments$id <- seq_along(segments$street)
-lines.list <- strsplit(segments$line, ",")
-lines <- data.frame()
-for (segment in 1:length(lines.list)){
-  lines <- rbind(lines, cbind(segment, lines.list[[segment]]))
+drawLines <- function(lat, lon){
+  fns.parms <- paste0("lat=", lat, "&lng=", lon)
+  seg <- fromJSON(file = paste0(fns.url, fns.parms))
+  seg <- sapply(seg$streetSegment, function(i) c(i$name, i$fraddl, i$fraddr, i$toaddl, i$toaddr, 
+                                                i$mtfcc, i$zip, i$postalcode, i$distance, i$line))
+  segments <- seg %>% t %>% as.data.frame(stringsAsFactors = FALSE) %>% 
+              setNames(c("street",	"fraddl", "fraddr",	"toaddl", "toaddr",	 "mtfcc",	"zip", 
+                         "distance", "line"))
+  segments$id <- seq_along(segments$street)
+  lines.list <- strsplit(segments$line, ",")
+  lines <- data.frame()
+  for (segment in 1:length(lines.list)){
+    lines <- rbind(lines, cbind(segment, lines.list[[segment]]))
+  }
+  lines$V2 <- as.character(lines$V2)
+  lines <- lines %>% separate(V2, c("lon", "lat"), " ") %>% 
+            mutate(lon = as.numeric(lon), lat = as.numeric(lat))
+  # relevel to separate similar color lines
+  lines$segment <- factor(lines$segment, levels(lines$segment)[c(3, 6, 7, 2, 8, 9, 1, 5, 4, 10)])
+  means <- lines %>% group_by(segment) %>% summarize(lat = mean(lat), lon = mean(lon))
+  map <- get_map(location = paste0(lat, ",", lon), zoom = 17, maptype = "toner-lines")
+  ggmap(map) + 
+     geom_line(data = lines, aes(x = lon, y = lat, color = segment), size = 4) +
+     theme_nothing() +
+     geom_point(data = data.frame(lon = lon, lat = lat), aes(x = lon, y = lat), 
+                size = 10) +
+     geom_point(data = data.frame(lon = lon, lat = lat), aes(x = lon, y = lat), 
+                size = 8, color = "red") +
+     geom_text(data = means, aes(x = lon, y = lat, label = segment), size = 6)
 }
-lines$V2 <- as.character(lines$V2)
-lines <- separate(lines, V2, c("lon", "lat"), " ")
-lines$lon <- as.numeric(lines$lon)
-lines$lat <- as.numeric(lines$lat)
+
+drawLines(block.35[order(block.35$lat), ][1, "lat"], block.35[order(block.35$lat), ][1, "lon"])
 ```
 
-
-```r
-# relevel to separate similar color lines
-lines$segment <- factor(lines$segment, levels(lines$segment)[c(3, 6, 7, 2, 8, 9, 1, 5, 4, 10)])
-means <- lines %>% group_by(segment) %>% summarize(lat = mean(lat), lon = mean(lon))
-ggmap(map.sewardPark) + 
-   geom_line(data = lines, aes(x = lon, y = lat, color = segment), size = 4) +
-   theme_nothing() +
-   geom_point(data = block.35[order(block.35$lat), ][1, ], aes(x = lon, y = lat), 
-              size = 10) +
-   geom_point(data = block.35[order(block.35$lat), ][1, ], aes(x = lon, y = lat), 
-              size = 8, color = "red") +
-   geom_text(data = means, aes(x = lon, y = lat, label = segment), size = 6)
-```
-
-![](Figs/clinton lines-1.png) 
+![](Figs/draw lines-1.png) 
 
 The point of interest is indicated by the red dot, and each returned segment is uniquely colored. The first segment returned is definitely the most correct: Clinton from 166 - 185. Segment 2 is not wanted, and is actually just a sidewalk from Clinton to Essex. Segment 3 is the other segment that completes this block. Segments 4 - 10 are not part of the block. **The task at hand is to create a reproducible process that groups segments 1 and 3 into a block, and eliminates the other results**.  
 
@@ -243,10 +242,14 @@ for (tree in 1:661) { #nrow(treeMap)
     fni.parms2 <- paste0("lat=", segments[segment, "lat2"], 
                          "&lng=", segments[segment, "lon2"])
     int2 <- fromJSON(file = paste0(fni.url, fni.parms2))
-  
+
     if (int1$intersection$distance < 0.001) {
       streets <- c(int1$intersection$street1, int1$intersection$street2)
       street <- streets[streets != primary]
+      if (length(street) > 1) {
+        # street might have different name near one intersection
+        street <- paste(street, collapse = " & ")
+      }
       tmpBlock <- rbind(tmpBlock, 
                         data.frame(segment, street = street,
                                    lat = int1$intersection$lat, lon = int1$intersection$lng, 
@@ -255,6 +258,9 @@ for (tree in 1:661) { #nrow(treeMap)
     if (int2$intersection$distance < 0.001) {
       streets <- c(int2$intersection$street1, int2$intersection$street2)
       street <- streets[streets != primary]
+      if (length(street) > 1) {
+        street <- paste(street, collapse = " & ")
+      }
       tmpBlock <- rbind(tmpBlock, 
                         data.frame(segment, street = street,
                                    lat = int2$intersection$lat, lon = int2$intersection$lng, 
@@ -268,6 +274,7 @@ for (tree in 1:661) { #nrow(treeMap)
        break
      } else if (nrow(tmpBlock) > 2) {
        # error caught in the below null check
+       # usually signifies a block missing some segment
        tmpBlock <- NULL
        break
      }
@@ -299,13 +306,7 @@ Most of the points are successfully mapped to blocks. There are a few errors, su
 
 
 ```r
-wburgBridge <- get_map(location = "40.7169942,-73.9859083", zoom = 17, maptype = "toner-lines")
-ggmap(wburgBridge) +
-  geom_line(data = segment.662, aes(x = lon, y = lat, color = segment), size = 4) +
-  theme_nothing() +
-  geom_point(data = treeMap[662, ], aes(x = lon, y = lat), size = 10) + 
-  geom_point(data =treeMap[662, ], aes(x = lon, y = lat), size = 8, color = "red") +
-  geom_text(data = means, aes(x = lon, y = lat, label = segment), size = 6)
+drawLines(treeMap[662, "lat"], treeMap[662, "lon"])
 ```
 
 ![](Figs/wburg bridge-1.png) 
@@ -320,22 +321,76 @@ length(err)
 ```
 
 ```
-## [1] 33
+## [1] 21
 ```
 
 ```r
 errTable <- table(treeMap[err, "street"])
-errTable
+errTable 
 ```
 
 ```
 ## 
-##  Attorney St     Avenue D       Bowery     Canal St  Chrystie St 
-##            1            3            2            2            1 
-##   Clinton St     E 2nd St     E 4th St     E 5th St E Houston St 
-##            5            1            2           11            3 
-##     Essex St   Stanton St 
-##            1            1
+##  Attorney St     Avenue D     Canal St   Clinton St     E 4th St 
+##            1            3            1            1            2 
+##     E 5th St E Houston St     Essex St 
+##           11            1            1
 ```
 
-Out of the 33 errors recorded, the majority are on E 5th St. Looking at the data, those points lie on a dead-end street which indeed has only a single intersection. How can that be recorded in the data? 
+Out of the 21 errors recorded, the majority are on E 5th St. Looking at the data, those points lie on a dead-end street which indeed has only a single intersection. How can that be recorded in the data? 
+
+
+```r
+drawLines(treeMap[67, "lat"], treeMap[67, "lon"])
+```
+
+![](Figs/5th st-1.png) 
+
+Here is another point that was caught as an error
+
+
+```r
+drawLines(treeMap[462, "lat"], treeMap[462, "lon"])
+```
+
+![](Figs/4th st-1.png) 
+
+The FNS API doesn't return segments to complete the full block between Ave A and B. In both of these cases, the `tmpBlock` dataframe captures the correct end from the primary block. But it also captures both ends of the segment next to it (segment 2 in the above image). This has motivated a fall back option when `tmpBlock` includes more than 2 block ends. In these cases, the primary segment will be used for both block ends, even though one end does not sit on an intersection.  
+
+For the above point, 462, this means the block is mapped to 4th St b/w A and B. For the 5th St dead-end segment (67), it will be recorded as 5th St b/w B and C. Unfortunately, it's impossible to distinguish between an actual dead-end block and one that simply didn't return it's complete segments. The above two cases look the same from the data point of view. It's only with the actual map underlaid that it can be seen 4th does indeed intersect with Avenue A and 5th doesn't interset with Avenue B.  
+
+In the code, an additional block is added to preserve the intersections from the primary segment. If the loop later finds more than 2 block ends, it will default to using the intersections nearest the primary block. 
+
+
+```r
+    if (segment == 1) {
+      primary.int1 <- int1
+      primary.int2 <- int2
+    }
+
+###############################
+
+   if (nrow(tmpBlock) > 2) {
+       tmpBlock <- rbind(data.frame(1, street = getStreet(primary, primary.int1$intersection),
+                                    lat = int1$intersection$lat, lon = int1$intersection$lng, 
+                                    stringsAsFactors = FALSE),
+                         data.frame(1, street = getStreet(primary, primary.int2$intersection),
+                                    lat = int1$intersection$lat, lon = int1$intersection$lng, 
+                                    stringsAsFactors = FALSE))       
+   }
+
+###############################
+
+getStreet <- function(primary, intersection) {
+  streets <- c(intersection$street1, intersection$street2)
+  street <- streets[streets != primary]
+  if (length(street) > 1) {
+   street <- paste(street, collapse = " & ")
+  }  
+  street
+}
+```
+
+
+
+A similar method needs to be implemented to handle the Delancey St error. 
