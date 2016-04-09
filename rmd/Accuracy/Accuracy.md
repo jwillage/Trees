@@ -8,7 +8,7 @@ March 30, 2016
 
 This is an exploration to achieve higher accuracy in mapping latitude and longitude to a street segment. Here a segment is defined as a section of street bounded by two other streets. The end goal is an abstracted pattern, but the motivation is to more accurately map trees in New York City to a specific block. 
 
-The previous analysis left off by stating that an answer was reached, "but how valid is it?" Some inconsistancies were noted, specifically with the block that had the highest reported TPM. Recall the graphic that went with this statement. 
+The [previous analysis](http://www.joewillage.com/blog/2016/3/31/analyzing-new-yorks-trees) left off by stating that an answer to which block is the most tree lined had been reached, "but how valid is it?" Some inconsistencies were noted, specifically with the block that had the highest reported TPM. Recall the graphic that went with this statement. 
 
 
 ```r
@@ -33,22 +33,13 @@ ggmap(map.sewardPark) +
 
 ![](Figs/sewardPark-1.png) 
 
-And note that all of these trees mapped to the block of Grand b/w Clinton and Suffolk, when most actually lie on Clinton St. The southmost tree mapped to this block is the following.
-
 
 ```r
 block.35 <- treeMap[treeMap$blockId == 35, ]
-head(block.35[order(block.35$lat), ], 1)
 ```
+And note that all of these points mapped to the block of Grand b/w Clinton and Suffolk, when most actually lie on Clinton St. The southmost point mapped to this block is tree 165907 (40.7153009, -73.9871687). Tree 165907 is reverse geocoded as 410 Grand, with the ArcGIS API. One alternative is retrieving the full tree data from the Tree Map website. That returns the nearest address as 187 Clinton. Much more accurate, but not extensible. 
 
-```
-##          lat       lon stumpDiam number   street   zip     id blockId
-## 1690 40.7153 -73.98717        12    410 Grand St 10002 165907      35
-```
-
-Tree 165907 is reverse geocoded as 410 Grand, but viewing the full tree data from the Tree Map website returns the nearest address as 187 Clinton, much more accurate. This may prove to be a useful alternative.  
-
-However, the Geonames Find Nearby Streets (FNS) API provids another useful match. It's not the exact address that's needed for any tree, it's just the nearest street. In fact, that API provides not only the nearest street, but also the to/from addresses of the segment. A takeaway from the first analysis is that mixing and matching geocoding services gets messy. In attempt to minimize error, only the Geonames family of APIs will be used.  
+It's not the exact address that's needed for a given point, just the block it lies on. The Geonames Find Nearby Streets (FNS) API proves useful here. In fact, that API provides not only the nearest street, but also the to/from addresses of the segment (JICOC [just in case, of course]). A takeaway from the first analysis is that mixing and matching geocoding services gets messy. In attempt to minimize error, only the Geonames family of APIs will be used.  
 
 For the point of interest, here is the result from the Geonames Find Nearby Streets call.
 
@@ -81,11 +72,11 @@ segments[, 1:8]
 ## 10   Grand St    374    383    388    387 S1400 10002    0.104
 ```
 
-This useful result set returns the to and from addresses for both sides of the street, as well as the distance from the street (which is how the results are ordered). This may be useful in validation down the line. A final component, not included in the above table, are the coordinate lines of each segment. This allows for drawing a multi-point segment on a map, another useful tool in validation. Plotting these street segments results in the following
+This useful result set returns the to and from addresses for both sides of the street, as well as the distance from the street (in fact that's how the results are ordered). This may be useful in validation down the line. A final component, not included in the above table, are the coordinate that make up each segment. This is a robust value, and includes not just the points for the start and end of the segment, but points of curvature in between. This allows for drawing a multi-point segment on a map, another useful tool in validation. Plotting these segments results in the following
 
 
 ```r
-drawLines <- function(lat, lon){
+drawLines <- function(lat, lon, maptype){
   fns.parms <- paste0("lat=", lat, "&lng=", lon)
   seg <- fromJSON(file = paste0(fns.url, fns.parms))
   seg <- sapply(seg$streetSegment, function(i) c(i$name, i$fraddl, i$fraddr, i$toaddl, i$toaddr, 
@@ -105,7 +96,7 @@ drawLines <- function(lat, lon){
   # relevel to separate similar color lines
   lines$segment <- factor(lines$segment, levels(lines$segment)[c(3, 6, 7, 2, 8, 9, 1, 5, 4, 10)])
   means <- lines %>% group_by(segment) %>% summarize(lat = mean(lat), lon = mean(lon))
-  map <- get_map(location = paste0(lat, ",", lon), zoom = 17, maptype = "toner-lines")
+  map <- get_map(location = paste0(lat, ",", lon), zoom = 17, maptype = maptype)
   ggmap(map) + 
      geom_line(data = lines, aes(x = lon, y = lat, color = segment), size = 4) +
      theme_nothing() +
@@ -116,25 +107,26 @@ drawLines <- function(lat, lon){
      geom_text(data = means, aes(x = lon, y = lat, label = segment), size = 6)
 }
 
-drawLines(block.35[order(block.35$lat), ][1, "lat"], block.35[order(block.35$lat), ][1, "lon"])
+drawLines(block.35[order(block.35$lat), ][1, "lat"], block.35[order(block.35$lat), ][1, "lon"],
+          "toner-lines")
 ```
 
 ![](Figs/draw lines-1.png) 
 
-The point of interest is indicated by the red dot, and each returned segment is uniquely colored. The first segment returned is definitely the most correct: Clinton from 166 - 185. Segment 2 is not wanted, and is actually just a sidewalk from Clinton to Essex. Segment 3 is the other segment that completes this block. Segments 4 - 10 are not part of the block. **The task at hand is to create a reproducible process that groups segments 1 and 3 into a block, and eliminates the other results**.  
+The point of interest is indicated by the red dot, and each returned segment is uniquely colored. The first segment returned is definitely the most correct: Clinton from 166 - 185. Segment 2 is unwanted, and is actually just a sidewalk from Clinton to Essex. Segment 3 is the other segment that completes this block. Segments 4 - 10 are not part of the block. **The task at hand is to create a reproducible process that groups segments 1 and 3 into a block, and eliminates the other results**.  
 
-The approach involves the Geonames Find Nearest Intersection (FNI) API. Each segment previously returned from FNS will have it's two endpoints passed into FNI. The order of rules is as follows:  
+The approach involves the Geonames Find Nearest Intersection (FNI) API. Each segment previously returned from the FNS API will have it's two endpoints passed into FNI. The order of rules is as follows:  
 
-1) Segments are evaluated in the order of minimal `distance` from the point. The first segment will act as the reference point. Segments may be considered to be part of the block if their `street` is the same value as that of the first segment.   
-1) A call is made to the FNI API using the segment's first and last coordinates.  
+1) Segments are evaluated in the order of minimal `distance` from the point. The first segment will act as the reference point. Segments may be considered to be part of the block only if their `street` is the same value as that of the first segment.   
+1) A call is made to the FNI API using the segment's endpoints (first and last coordinates).  
 2) Endpoints that are within X `distance` of their nearest intersection are marked as a block end. X is close to 0.
-2) If block has two ends, exit the process.  
-3) If block has less than two ends, repeat for remaining segments.   
+2) If the block has two ends, exit the process.  
+3) If the block has less than two ends, repeat with the remaining segments.   
 
 An example with the previous data is as follows:  
-Segment 1 is the reference point and an FNI call is made with each of it's endpoints. The results are distinct. The distance of first endpoint is 0. The distance of the second endpoint is 0.7. Endpoint 1 is added as a block end. The block is still incomplete, process next segment. 
+Segment 1 is the reference point and an FNI call is made with each of it's endpoints. Two distinct intersections are returnd. The distance of the first endpoint to it's nearest intersction is 0. The distance of the second endpoint to it's nearest intersection is 0.7. Endpoint 1 is added as a block end. The block is still incomplete, process next segment. 
 
-The street of segment 2 does not match the reference (segment 1). It's street name is actually the empty string. Skip this segment.  
+The street of segment 2 does not match the reference (segment 1). It's street name is actually an empty string. Skip this segment.  
 
 Segment 3 has a matching street name, "Clinton St". The FNI calls are made for both endpoints. Distinct endpoints are returned. Endpoint 1 has distance 0.7, and endpoint 2 has distance 0. Endpoint 2 is added as a block end. The block now has two ends and is considered complete. The process exits.  
 
@@ -191,7 +183,7 @@ blocks
 ## 1              3    E Broadway   40.71431 -73.987165
 ```
 
-The method works well for a single point. The next challenge is iterating through a list of points, checking if they belong to an existing block or if a new block needs to be created. With this process, the FNS API is called for each point and a matching blocks is found. This ensures **accuracy**. A less expensive approach may be to create for each block a polygon (ie thin rectangle) and check if the point lies within. 
+The method works well for a single point. The next challenge is iterating through a list of points, checking if they belong to an existing block or if a new block needs to be created. With this process, the FNS API is called for each point and a matching block is created. This ensures **accuracy**. A less expensive approach may be to create for each block a polygon (ie thin rectangle for a straight-line block) and check if the point lies within. 
 
 
 ```r
@@ -215,7 +207,21 @@ getSegments <- function(lat, lon) {
 
 A `getSegments` function is broken out to find all the nearest segments to a given point. The code to grab the beginning and ending coordinates for a segment is streamlined in an sapply statement. The complete lines are disgarded, as can be seen by the absence of column 9 in the final statement.  
 
-Iterating through the list of trees will look as follows.  
+Another small function, `getStreet` helps with code reuse.
+
+
+```r
+getStreet <- function(primary, intersection) {
+  streets <- c(intersection$street1, intersection$street2)
+  street <- streets[streets != primary]
+  if (length(street) > 1) {
+   street <- paste(street, collapse = " & ")
+  }  
+  street
+}
+```
+
+Now, embedding this process within a loop for every point will look like this:
 
 
 ```r
@@ -228,7 +234,7 @@ blocks <- data.frame(id = 1, primary.street = "Clinton St", cross1.segment = 1,
 err <- NULL
 tmpBlock <- NULL
 treeMap$blockId <- NULL
-for (tree in 1:661) { #nrow(treeMap)
+for (tree in 1:nrow(treeMap)) { 
   segments <- getSegments(treeMap[tree, "lat"], treeMap[tree, "lon"])
   primary <- segments[1, "street"]
   tmpBlock <- data.frame()
@@ -244,25 +250,14 @@ for (tree in 1:661) { #nrow(treeMap)
     int2 <- fromJSON(file = paste0(fni.url, fni.parms2))
 
     if (int1$intersection$distance < 0.001) {
-      streets <- c(int1$intersection$street1, int1$intersection$street2)
-      street <- streets[streets != primary]
-      if (length(street) > 1) {
-        # street might have different name near one intersection
-        street <- paste(street, collapse = " & ")
-      }
       tmpBlock <- rbind(tmpBlock, 
-                        data.frame(segment, street = street,
+                        data.frame(segment, street = getStreet(primary, int1$intersection),
                                    lat = int1$intersection$lat, lon = int1$intersection$lng, 
                                    stringsAsFactors = FALSE))
     } 
     if (int2$intersection$distance < 0.001) {
-      streets <- c(int2$intersection$street1, int2$intersection$street2)
-      street <- streets[streets != primary]
-      if (length(street) > 1) {
-        street <- paste(street, collapse = " & ")
-      }
       tmpBlock <- rbind(tmpBlock, 
-                        data.frame(segment, street = street,
+                        data.frame(segment, street = getStreet(primary, int2$intersection),
                                    lat = int2$intersection$lat, lon = int2$intersection$lng, 
                                    stringsAsFactors = FALSE))
     } 
@@ -273,14 +268,13 @@ for (tree in 1:661) { #nrow(treeMap)
                             "cross2.segment", "cross2.street", "cross2.lat", "cross2.lon")
        break
      } else if (nrow(tmpBlock) > 2) {
-       # error caught in the below null check
-       # usually signifies a block missing some segment
+       # error caught in the below null check. Usually signifies a block missing some segment
        tmpBlock <- NULL
        break
      }
   }
   if (is.null(tmpBlock$cross1.segment) | is.null(tmpBlock$cross2.segment)) {
-    # 2 endpoints were not found in the list of segments
+    # 2 endpoints were not found in the list of segments. add to error list and go to next poitn
     err <<- c(err, tree)
     tmpBlock <- NULL
     next
@@ -300,20 +294,9 @@ for (tree in 1:661) { #nrow(treeMap)
 }
 ```
 
-Most of the points are successfully mapped to blocks. There are a few errors, such as the following, the segments related to point 662.  
 
 
-
-
-```r
-drawLines(treeMap[662, "lat"], treeMap[662, "lon"])
-```
-
-![](Figs/wburg bridge-1.png) 
-
-The point is located on Delancey St b/w Clinton and Ridge. However, the segments returned by the FNS API do not form the complete block. Segment 1 accurately forms part of the block, but the portion closest to Ridge is missing. Even with the radius set to the max of 1 km, no additional segments are returned. In this case, the above loop threw an error because both block ends have the same name (`minStreet` is comprised of 2 values so the `cbind` fails). Error-checking for this stype of situation can be included, but ultimately the block has to be added manually.  
-
-Point 662 actually halted execution, but errors were also captured in cases where 2 endpoints were not found.  
+Most of the points are successfully mapped to blocks, but errors out on point 985 (more on that later).
 
 
 ```r
@@ -321,7 +304,7 @@ length(err)
 ```
 
 ```
-## [1] 21
+## [1] 36
 ```
 
 ```r
@@ -331,20 +314,23 @@ errTable
 
 ```
 ## 
-##  Attorney St     Avenue D     Canal St   Clinton St     E 4th St 
-##            1            3            1            1            2 
-##     E 5th St E Houston St     Essex St 
-##           11            1            1
+##     Allen St  Attorney St     Avenue D    Broome St     Canal St 
+##            3            4            3            2            1 
+##   Clinton St  Delancey St     E 4th St   E 4th Walk     E 5th St 
+##            1            3            3            2           11 
+## E Houston St     Essex St     Grand St 
+##            1            1            1
 ```
 
-Out of the 21 errors recorded, the majority are on E 5th St. Looking at the data, those points lie on a dead-end street which indeed has only a single intersection. How can that be recorded in the data? 
+Out of the 36 errors recorded, the majority are on E 5th St. Looking at the data, those points lie on a dead-end street which indeed has only a single intersection. How can that be recorded in the data? 
 
 
 ```r
-drawLines(treeMap[67, "lat"], treeMap[67, "lon"])
+drawLines(treeMap[67, "lat"], treeMap[67, "lon"], "toner-lines")
 ```
 
 ![](Figs/5th st-1.png) 
+
 
 Here is another point that was caught as an error
 
@@ -355,11 +341,27 @@ drawLines(treeMap[462, "lat"], treeMap[462, "lon"])
 
 ![](Figs/4th st-1.png) 
 
-The FNS API doesn't return segments to complete the full block between Ave A and B. In both of these cases, the `tmpBlock` dataframe captures the correct end from the primary block. But it also captures both ends of the segment next to it (segment 2 in the above image). This has motivated a fall back option when `tmpBlock` includes more than 2 block ends. In these cases, the primary segment will be used for both block ends, even though one end does not sit on an intersection.  
+The FNS API doesn't return segments to complete the full block between Ave A and B. Even with the radius set to the max of 1 km, no additional segments are returned. In both of these cases, the `tmpBlock` dataframe captures the correct single end from the primary block. But it also captures both ends of the segment next to it (segment 2 in the above image). This has motivated a fall back option when `tmpBlock` includes more than 2 block ends. In these cases, the endpoints of the primary segment will be used for both block ends, even though one end does not sit on an intersection. Essentially, the segment is stretched out to the nearest intersection. 
 
 For the above point, 462, this means the block is mapped to 4th St b/w A and B. For the 5th St dead-end segment (67), it will be recorded as 5th St b/w B and C. Unfortunately, it's impossible to distinguish between an actual dead-end block and one that simply didn't return it's complete segments. The above two cases look the same from the data point of view. It's only with the actual map underlaid that it can be seen 4th does indeed intersect with Avenue A and 5th doesn't interset with Avenue B.  
 
-In the code, an additional block is added to preserve the intersections from the primary segment. If the loop later finds more than 2 block ends, it will default to using the intersections nearest the primary block. 
+In the code, an additional chunk is added to preserve the intersections from the primary segment. If the loop later finds more than 2 block ends, it will default to using the intersections nearest the primary block.   
+
+Another addition is a check if `minStreet > 1`. This handles situations where both block ends are the same intersection, marking the second one as NA. This was the case for the point that broke the loop, 985.  
+
+**`<Interesting digression alert>`**  
+Here is the block which threw the error
+
+
+```r
+drawLines(treeMap[985, "lat"], treeMap[985, "lon"], "terrain")
+```
+
+![](Figs/E Bway-1.png) 
+
+The point is on the north side of Grand St. One of the design choices is to combine both sides of the street. So whether on the north or south, blocks on Grand will be split at Pitt, Bialystoker, East Broadway (1), East Broadway (2), Columbia, Henriy/Jackson, Lewis, and Madison. The point lies on the intersection between E Broadway and E Broadway. There is a weird triangle where East Broadway splits into a small west-bound section and then a separate east-bound section. The block should legitimately be on Grand between E Broadway and E Broadway (segment 1 between segments 5 and 2). This is a rare instance where the same intersection should correctly be used for both block ends. `< / Digression>`     
+
+The added chunks are as follows  
 
 
 ```r
@@ -372,93 +374,155 @@ In the code, an additional block is added to preserve the intersections from the
 
    if (nrow(tmpBlock) > 2) {
        tmpBlock <- rbind(data.frame(1, street = getStreet(primary, primary.int1$intersection),
-                                    lat = int1$intersection$lat, lon = int1$intersection$lng, 
-                                    stringsAsFactors = FALSE),
+                                  ...),
                          data.frame(1, street = getStreet(primary, primary.int2$intersection),
-                                    lat = int1$intersection$lat, lon = int1$intersection$lng, 
-                                    stringsAsFactors = FALSE))       
+                                   ...))       
    }
 
 ###############################
 
-getStreet <- function(primary, intersection) {
-  streets <- c(intersection$street1, intersection$street2)
-  street <- streets[streets != primary]
-  if (length(street) > 1) {
-   street <- paste(street, collapse = " & ")
-  }  
-  street
-}
+ minStreet <- which(tmpBlock$street == min(tmpBlock$street))
+       if (length(minStreet) > 1) {
+         tmpBlock <- cbind(tmpBlock[1, ], "NA", "NA", "NA", "NA")
+       }
 ```
 
 
 
-That method accounts for many of the errors. 
+
+
+That method accounts for many of the previous errors. The following blocks were captured.  
 
 
 ```r
-blocks[grepl("&", blocks$cross1.street) | grepl("&", blocks$cross2.street), ]
+prevErrs <- blocks[grepl("&", blocks$cross1.street) | grepl("&", blocks$cross2.street) | grepl("NA", blocks$cross2.street), c(1, 2, 4, 8, 11)]
+prevErrs
 ```
 
 ```
-##      id primary.street cross1.segment                  cross1.street
-## 271  27      Peretz Sq              1        E Houston St & Allen St
-## 224  53     Clinton St              2 Delancey St & Williamsburg Brg
-## 232  76   E Houston St              1            Columbia St & Ave D
-## 129 129    Division St              1                       Canal St
-## 157 157   E Houston St              1            Columbia St & Ave D
-##     cross1.lat cross1.lon cross2.segment         cross2.street cross2.lat
-## 271  40.722933 -73.988643              1            Orchard St  40.722697
-## 224  40.717862  -73.98569              1          Rivington St  40.719083
-## 232  40.719934  -73.97875              1            Sheriff St  40.720235
-## 129  40.714554 -73.990755              1 Essex St & Rutgers St   40.71466
-## 157  40.719934 -73.978753              1       Lillian Wald Dr   40.71931
-##     cross2.lon count
-## 271 -73.987865     2
-## 224  -73.98507     1
-## 232 -73.979735     1
-## 129   -73.9902     1
-## 157 -73.977224     4
+##       id  primary.street                  cross1.street
+## 23     6         Pitt St                      Broome St
+## 48    48    E Houston St                    Columbia St
+## 87    87     Attorney St                     Stanton St
+## 237   90    E Houston St                Ave C & Pitt St
+## 241  101        Essex St           Ave A & E Houston St
+## 109  109       Broome St    Bialystoker Pl & Abraham Pl
+## 254  133    E Houston St                Ave C & Pitt St
+## 154  154        E 6th St                          Ave D
+## 273  177      Clinton St Delancey St & Williamsburg Brg
+## 189  189   Staten St Exn           Stanton St & Pitt St
+## 295  224           Ave C                       E 2nd St
+## 299  228       Peretz Sq       Ludlow St & E Houston St
+## 2103 235      Abraham Pl     Bialystoker Pl & Broome St
+## 2441 244   Delancey St S      Delancey St & Attorney St
+## 2451 245        Grand St                     E Broadway
+## 2601 260      Stanton St             Bowery & Prince St
+## 2631 263       Hester St                      Ludlow St
+## 2641 264      E Broadway                       Grand St
+## 2721 272   Delancey St S                     Clinton St
+## 2791 279    E Houston St            Ave D & Columbia St
+## 2871 287     Columbia St                   Rivington St
+## 2901 290      Clinton St                   Rivington St
+## 305  305 Lillian Wald Dr                   E Houston St
+## 315  315      Norfolk St                    Delancey St
+## 320  320     Delancey St            Bowery & Kenmare St
+## 2137 325        Essex St                       Grand St
+## 2141 333         1st Ave                       E 1st St
+## 2142 334    E Houston St            Columbia St & Ave D
+##                         cross2.street count
+## 23    Samuel Dickstein Plz & Grand St    17
+## 48        Lillian Wald Dr & Baruch Dr     2
+## 87                                 NA     5
+## 237                          Ridge St     4
+## 241                        Stanton St     9
+## 109                           Pitt St     1
+## 254                        Sheriff St     9
+## 154                                NA     2
+## 273                      Rivington St     2
+## 189                    Stanton St Exn     3
+## 295            E Houston St & Pitt St     1
+## 299                        Orchard St     6
+## 2103                         Grand St     7
+## 2441                         Ridge St     2
+## 2451                               NA     3
+## 2601                      Chrystie St     3
+## 2631                               NA     7
+## 2641                               NA     2
+## 2721                               NA     2
+## 2791                  Lillian Wald Dr     3
+## 2871                               NA     1
+## 2901 Williamsburg Brg & Delancey St N     1
+## 305                                NA     1
+## 315                                NA     1
+## 320                       Chrystie St     3
+## 2137            Hester St & Ludlow St     1
+## 2141          E Houston St & Allen St     1
+## 2142                       Sheriff St     1
 ```
+
+These 28 blocks account for 100 points. Fortunately, correcting this is a relatively simple process: look up the coordinates (not shown) in a [map website](http://www.geonames.org/maps/us-reverse-geocoder.html) and plug the correct cross street directly into the `blocks` dataframe. For a larger number of blocks, this may be a job for Mechanical Turks[^1].  
+
+The remaining problem-points fell into the catch-all group (`err`), which includes only 17 points. The first one looks like this. 
+
 
 ```r
-sum(blocks[grepl("&", blocks$cross1.street) | grepl("&", blocks$cross2.street), "count"])
+drawLines(treeMap[err[1], "lat"], treeMap[err[1], "lon"], "toner-lines") 
 ```
 
-```
-## [1] 9
-```
+![](Figs/Baruch-1.png) 
 
-And the catch-all group includes only 21 points. 
+Here, even the map layer fails to capture the actual streets. The first 4 error points lie on Lillian Wald Dr, a block that actually loops around PS 188. Those streets are made up of segments 1 (roughly), 8 + 4, and a segment between 4 and the middle of 5. An accurate row for these points would have primary street as Lillian Wald Dr, and both cross streets as E Houston St.  
+
+Here is a map of all the un-handled error points.  
 
 
 ```r
-treeMap[err, ]
+lat.mid <- mean(c(min(treeMap[err, "lat"]), max(treeMap[err, "lat"])))
+lon.mid <- mean(c(min(treeMap[err, "lon"]), max(treeMap[err, "lon"])))
+map.errs <- get_map(location = paste0(lat.mid, ",", lon.mid), zoom = 15, maptype = "toner-lines")
+ggmap(map.errs) + 
+   geom_point(data = treeMap[err, ],
+              aes(x = lon, y = lat), alpha = 0.4, color = "blue", size = 8) +
+   theme_nothing()
+```
+
+![](Figs/unhandled errors-1.png) 
+
+Rather than manually correctly all of these, clustering will be group points close together, and the clusters can be manually corrected. That will knock the work down from 17 to 7 clusters.  
+
+
+```r
+treeMap.err <- treeMap[err, ]
+set.seed(123)
+km <- kmeans(cbind(treeMap.err[, "lat"], treeMap.err[, "lon"]), centers = 7, nstart = 50)
+treeMap.err$cluster <- as.factor(km$cluster)
+ggmap(map.errs) + 
+   geom_point(data = treeMap.err,
+              aes(x = lon, y = lat, color = cluster), alpha = 0.4, size = 8) +
+   theme_nothing() 
+```
+
+![](Figs/clustered errors-1.png) 
+
+Basic K-means clustering with k = 7 appears to have done the trick. Remember the dark-green cluster is the block of Lillian Wald Dr which loops off Houston. Now 7 blocks will be manually inserted into the blocks table, based on the clustered coordinates.  
+
+
+```r
+km$centers
 ```
 
 ```
-##          lat       lon stumpDiam number       street   zip     id blockId
-## 67  40.72327 -73.98077        12    620     E 5th St 10009 218687      NA
-## 68  40.72313 -73.98045        18    637     E 5th St 10009 223068      NA
-## 69  40.72323 -73.98069        17    620     E 5th St 10009 223778      NA
-## 70  40.72310 -73.98037        14    637     E 5th St 10009 225225      NA
-## 73  40.72333 -73.98093        14    629     E 5th St 10009 242957      NA
-## 74  40.72320 -73.98061        11    620     E 5th St 10009 264930      NA
-## 173 40.72320 -73.98035        12    637     E 5th St 10009 219372      NA
-## 187 40.71968 -73.98373         2    141  Attorney St 10002 225245      NA
-## 209 40.71595 -73.99517         3    125     Canal St 10002 235508      NA
-## 210 40.72328 -73.97643         4     93     Avenue D 10009 235530      NA
-## 269 40.71879 -73.98516         2     78   Clinton St 10002 276493      NA
-## 288 40.71615 -73.98933        15     41     Essex St 10002 110735      NA
-## 386 40.72343 -73.98278         3    238     E 4th St 10009 233386      NA
-## 412 40.71959 -73.97671         3    525 E Houston St 10002 238741      NA
-## 419 40.72225 -73.97651        10     77     Avenue D 10009 241059      NA
-## 462 40.72335 -73.98285         3    238     E 4th St 10009 255640      NA
-## 464 40.72313 -73.98019        10    637     E 5th St 10009 255988      NA
-## 516 40.72323 -73.98043        12    637     E 5th St 10009 271857      NA
-## 544 40.72233 -73.97635         2     77     Avenue D 10009 277632      NA
-## 616 40.72340 -73.98083        12    629     E 5th St 10009 215925      NA
-## 628 40.72337 -73.98076        10    629     E 5th St 10009 244803      NA
+##       [,1]      [,2]
+## 1 40.71730 -73.98577
+## 2 40.72277 -73.99273
+## 3 40.71987 -73.97699
+## 4 40.71556 -73.98579
+## 5 40.71491 -73.99019
+## 6 40.71501 -73.98725
+## 7 40.71524 -73.99475
 ```
 
-A similar method needs to be implemented to handle the Delancey St error. 
+
+[^1]:  **AWS Mechanical Turk**  
+  AWS service that allows users to pay for humans to perform a rote task.  
+  https://aws.amazon.com/documentation/mturk/ &nbsp;&nbsp;&nbsp;
