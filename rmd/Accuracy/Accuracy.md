@@ -6,9 +6,9 @@ March 30, 2016
 
 
 
-This is an exploration to achieve higher accuracy in mapping latitude and longitude to a street block. A block is defined as a section of street bounded by one or two other sections of street. The end goal is an abstracted pattern, but the motivation is to more accurately map trees in New York City to a specific block. 
+This is an exploration to achieve higher accuracy in mapping latitude and longitude to a street block. A block is defined as a section of street bounded by one or two other sections of street. The end goal is an abstracted, reusable pattern, but the motivation is to more accurately map trees in New York City to a specific block. 
 
-The [previous analysis](http://www.joewillage.com/blog/2016/3/31/analyzing-new-yorks-trees) left off by stating that an answer to which block is the most tree lined had been reached, "but how valid is it?" Some inconsistencies were noted, specifically with the block that had the highest reported TPM. This is the graphic that went with this statement. 
+The [previous analysis](http://www.joewillage.com/blog/2016/3/31/analyzing-new-yorks-trees) left off by stating that an answer to which block is the most tree lined had been reached, "but how valid is it?" Some inconsistencies were noted, specifically with the block that had the highest reported TPM. Below is the graphic that went along with the statement. 
 
 
 ```r
@@ -352,7 +352,7 @@ Here is another point that was caught as an error
 drawLines(points[462, "lat"], points[462, "lon"])
 ```
 
-![](Figs/4th st-1.png) 
+![](Figs/4th st-1.png)
 
 The FNS API doesn't return segments to complete the full block between Ave A and B. Even with the radius set to the max of 1 km, no additional segments are returned. In both of these cases, the `tmpBlock` dataframe captures the correct single end from the reference segment. But it also captures both ends of the segment next to it (segment 2 in the above image). This has motivated a fall back option when `tmpBlock` includes more than 2 block ends. In these cases, the endpoints of the primary segment will be used for both block ends, even though one end does not sit on an intersection. Essentially, the segment is stretched out to the nearest intersection. 
 

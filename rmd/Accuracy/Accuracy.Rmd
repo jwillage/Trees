@@ -5,6 +5,7 @@ date: "March 30, 2016"
 output: 
   html_document: 
     keep_md: yes
+    code_folding: hide
 ---
 
 ```{r, include = FALSE}
@@ -16,9 +17,9 @@ knitr::opts_chunk$set(fig.width = 7, fig.height = 7, fig.path='Figs/',
                       warning = FALSE, message = FALSE, cache = TRUE)
 ```
 
-This is an exploration to achieve higher accuracy in mapping latitude and longitude to a street block. A block is defined as a section of street bounded by one or two other sections of street. The end goal is an abstracted pattern, but the motivation is to more accurately map trees in New York City to a specific block. 
+This is an exploration to achieve higher accuracy in mapping latitude and longitude to a street block. A block is defined as a section of street bounded by one or two other sections of street. The end goal is an abstracted, reusable pattern, but the motivation is to more accurately map trees in New York City to a specific block. 
 
-The [previous analysis](http://www.joewillage.com/blog/2016/3/31/analyzing-new-yorks-trees) left off by stating that an answer to which block is the most tree lined had been reached, "but how valid is it?" Some inconsistencies were noted, specifically with the block that had the highest reported TPM. This is the graphic that went with this statement. 
+The [previous analysis](http://www.joewillage.com/blog/2016/3/31/analyzing-new-yorks-trees) left off by stating that an answer to which block is the most tree lined had been reached, "but how valid is it?" Some inconsistencies were noted, specifically with the block that had the highest reported TPM. Below is the graphic that went along with the statement. 
 
 ```{r, warning = FALSE, message = FALSE}
 library(ggmap)
