@@ -2,7 +2,9 @@
 title: "Revised"
 author: "Joe Willage"
 date: "April 14, 2016"
-output: html_document
+output: 
+  html_document: 
+    keep_md: yes
 ---
 
 ```{r, include = FALSE}
@@ -39,7 +41,7 @@ treemap.url <- paste("https://tree-map.nycgovparks.org/points",
               "undefined", sep = "/")
 treeMap <- data.frame()
 # Retrieve 1000 trees at a time
-for (i in 1:87) { # ~63K trees in Manh + various trees from BK, Qns, Bx that are in the box = 87K
+for (i in 1:87) { # ~64K trees in Manh + various trees from BK, Qns, Bx that are in the box = 87K
   raw <- fromJSON(file = paste(treemap.url, i, 1000, sep = "/"))
   tmp <- lapply(raw$item, function(x) {
     c(x$id, x$lat, x$lng, x$stumpdiameter, x$species$id)
@@ -58,7 +60,7 @@ treeMap <- readRDS("rds/treeMap.rds")
 head(treeMap)
 ```
 
-Next, the trees are subset to just those in Manhattan. The first step is to retrieve a shape file describing Manhattan.     
+Next, the trees are subset to just those in Manhattan. The first step is to retrieve a shape file describing Manhattan[^2].     
 
 ```{r draw Manhattan}
 shapes <- fromJSON(file = paste0("http://services5.arcgis.com/GfwWNkhOj9bNBqoJ/arcgis/rest/",
@@ -145,7 +147,8 @@ blocks <- data.frame(id = 1, primary.street = "Clinton St", cross1.segment = 1,
 err <- NULL
 tmpBlock <- NULL
 treeMap$blockId <- NULL
-for (tree in 1:10) { #nrow(treeMap)
+for (tree in 1:nrow(treeMap)) { 
+  tryCatch({
   segments <- getSegments(treeMap[tree, "lat"], treeMap[tree, "lon"])
   primary <- segments[1, "street"]
   tmpBlock <- data.frame()
@@ -178,7 +181,6 @@ for (tree in 1:10) { #nrow(treeMap)
                                    stringsAsFactors = FALSE))
     } 
     if (nrow(tmpBlock) > 2) {
-      print(paste("segment ", segment))
       # error state with incomplete segments. Use primary segment for full block
        tmpBlock <- rbind(data.frame(1, street = getStreet(primary, primary.int1$intersection),
                                     lat = int1$intersection$lat, lon = int1$intersection$lng, 
@@ -215,9 +217,17 @@ for (tree in 1:10) { #nrow(treeMap)
     blocks <- rbind(blocks, 
                     cbind(id = nrow(blocks) + 1, primary.street = primary, tmpBlock, count = 1))
     treeMap[tree, "blockId"] <- nrow(blocks)
+  }},
+  error = function(e){
+    print(paste("error on tree", tree, "sleeping at", timestamp(quiet = T)))
+    Sys.sleep(3600)
+    tree <- tree - 1
+    print(paste("continuing at", timestamp(quiet = T)))
   }
+)
 }
 ```
+
 
 ####todo fix url rendering below
 [^1]: **New York City Street Tree Map Beta**  
@@ -228,3 +238,7 @@ for (tree in 1:10) { #nrow(treeMap)
   https://tree-map.nycgovparks.org/tree/full/\<tree-id from points json\>  
   Browser-based map:  
   https://tree-map.nycgovparks.org/ &nbsp;&nbsp;&nbsp;
+  
+[^2]: **NYC Open Data**  
+  Political and Administrative Boundaries, Borough Boundaries (Clipped to Shoreline)
+  http://www1.nyc.gov/site/planning/data-maps/open-data/districts-download-metadata.page&nbsp;&nbsp;&nbsp;
