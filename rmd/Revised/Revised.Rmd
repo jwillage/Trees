@@ -147,7 +147,8 @@ blocks <- data.frame(id = 1, primary.street = "Clinton St", cross1.segment = 1,
 err <- NULL
 tmpBlock <- NULL
 treeMap$blockId <- NULL
-for (tree in 1:nrow(treeMap)) { 
+Sys.sleep(60*37)
+for (tree in 1:nrow(trees)) { 
   tryCatch({
   segments <- getSegments(treeMap[tree, "lat"], treeMap[tree, "lon"])
   primary <- segments[1, "street"]
@@ -227,6 +228,36 @@ for (tree in 1:nrow(treeMap)) {
 )
 }
 ```
+
+```{r include = FALSE}
+treeMap <- readRDS("rds/treeMap.41283.rds")
+blocks <- readRDS("rds/blocks.41283.rds")
+err <- readRDS("rds/err.41283.rds")
+```
+
+####Clear cache for following after all trees complete. 
+```{r}
+length(err)
+```
+
+There are a lot of errors, but not too bad relative to the total number of trees mapped (`r paste0(round(length(err)/nrow(treeMap) * 100, 2), "%")`). The previous post introduced k-means clustering to group a block of trees together. The clustering method helps reduce the amount of manual labor, but the number of clusters has to be conservative, and clusters have to be verified. The starting number of clusters is obtained by dividing the number of errors by the median number of trees per block, resulting in `r ceiling(length(err)/median(blocks$count))` clusters. The idea is that each cluster will map to a block. 
+
+```{r manh errors}
+map.manh <- get_map(location = "manhattan", zoom = 12, maptype = "toner-lines")
+trees.err <- treeMap[err, ]
+set.seed(123)
+km <- kmeans(cbind(trees.err[, "lat"], trees.err[, "lon"]), 
+             centers = ceiling(length(err)/median(blocks$count)), nstart = 50)
+trees.err$cluster <- as.factor(km$cluster)
+ggmap(map.manh) + 
+   geom_point(data = trees.err,
+              aes(x = lon, y = lat, color = cluster), alpha = 0.4, size = 8) +
+   theme_nothing() 
+```
+
+As expected, there aren't many errors in midtown, where the grid system is working. The majority of errors pop up near the highways and bridges. It will take zooming in on each neighborhood and labeling the clusters to see if clusters can be combined or need to be split further.  
+
+
 
 
 ####todo fix url rendering below
