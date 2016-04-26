@@ -110,8 +110,8 @@ Now that the correct points are collected, they need to be mapped to a street bl
 
 ```{r block table, eval = FALSE}
 user <- readLines("../../geonames.txt")
-fns.url <- paste0("http://api.geonames.org/findNearbyStreetsJSON?&username=", user, "&")
-fni.url <- paste0("http://api.geonames.org/findNearestIntersectionJSON?&username=", user, "&")
+fns.url <- paste0("http://api.geonames.org/findNearbyStreetsJSON?username=", user, "&")
+fni.url <- paste0("http://api.geonames.org/findNearestIntersectionJSON?username=", user, "&")
 
 getSegments <- function(lat, lon) {
   fns.parms <- paste0("lat=", lat, "&lng=", lon)
@@ -162,12 +162,12 @@ for (tree in 1:nrow(treeMap)) {
     fni.parms2 <- paste0("lat=", segments[segment, "lat2"], 
                          "&lng=", segments[segment, "lon2"])
     int2 <- fromJSON(file = paste0(fni.url, fni.parms2))
-    
+
     if (segment == 1) {
       primary.int1 <- int1
       primary.int2 <- int2
     }
-  
+
     if (int1$intersection$distance < 0.001) {
       tmpBlock <- rbind(tmpBlock, 
                         data.frame(segment, street = getStreet(primary, int1$intersection),
@@ -219,8 +219,7 @@ for (tree in 1:nrow(treeMap)) {
     treeMap[tree, "blockId"] <- nrow(blocks)
   }},
   error = function(e){
-    print(paste("error on tree", tree, "sleeping at", timestamp(quiet = T)))
-    Sys.sleep(3600)
+    Sys.sleep(60*30)
     tree <- tree - 1
     print(paste("continuing at", timestamp(quiet = T)))
   }
@@ -228,8 +227,32 @@ for (tree in 1:nrow(treeMap)) {
 }
 ```
 
+```{r, include = FALSE} 
+treeMap <- readRDS("rds/treeMap.64397.rds") 
+blocks <- readRDS("rds/blocks.64397.rds")
+err <- readRDS("rds/err.64397.rds")
+```
 
-####todo fix url rendering below
+```{r}
+length(err) 
+```
+
+There are a lot of errors, but not too bad relative to the total number of trees mapped (`r paste0(round(length(err)/nrow(treeMap) * 100, 2), "%")`). The previous post introduced k-means clustering to group a block of trees together. The clustering method helps reduce the amount of manual labor, but the number of clusters has to be conservative, and clusters have to be verified. The starting number of clusters is obtained by dividing the number of errors by the median number of trees per block, resulting in `r ceiling(length(err)/median(blocks$count))` clusters. The idea is that each cluster will map to a block.
+
+```{r errors}
+map.manh <- get_map(location = "manhattan", zoom = 12, maptype = "toner-lines")
+trees.err <- treeMap[err, ]
+set.seed(123)
+km <- kmeans(cbind(trees.err[, "lat"], trees.err[, "lon"]), 
+             centers = ceiling(length(err)/median(blocks$count)), nstart = 50)
+trees.err$cluster <- as.factor(km$cluster)
+ggmap(map.manh) + 
+   geom_point(data = trees.err,
+              aes(x = lon, y = lat, color = cluster), alpha = 0.4, size = 8) +
+   theme_nothing() 
+```
+
+
 [^1]: **New York City Street Tree Map Beta**  
   Interactive map to view details from a city-wide to a single tree level. No official API  
   https://tree-map.nycgovparks.org/points/\<SW lat>\/\<SW lng\>/\<NE lat\>/\<NE lng\>/undefined/

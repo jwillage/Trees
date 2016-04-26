@@ -122,8 +122,8 @@ Now that the correct points are collected, they need to be mapped to a street bl
 
 ```r
 user <- readLines("../../geonames.txt")
-fns.url <- paste0("http://api.geonames.org/findNearbyStreetsJSON?&username=", user, "&")
-fni.url <- paste0("http://api.geonames.org/findNearestIntersectionJSON?&username=", user, "&")
+fns.url <- paste0("http://api.geonames.org/findNearbyStreetsJSON?username=", user, "&")
+fni.url <- paste0("http://api.geonames.org/findNearestIntersectionJSON?username=", user, "&")
 
 getSegments <- function(lat, lon) {
   fns.parms <- paste0("lat=", lat, "&lng=", lon)
@@ -159,7 +159,8 @@ blocks <- data.frame(id = 1, primary.street = "Clinton St", cross1.segment = 1,
 err <- NULL
 tmpBlock <- NULL
 treeMap$blockId <- NULL
-for (tree in 1322:10000) { #nrow(treeMap) managed 6361
+for (tree in 1:nrow(treeMap)) { 
+  tryCatch({
   segments <- getSegments(treeMap[tree, "lat"], treeMap[tree, "lon"])
   primary <- segments[1, "street"]
   tmpBlock <- data.frame()
@@ -173,12 +174,12 @@ for (tree in 1322:10000) { #nrow(treeMap) managed 6361
     fni.parms2 <- paste0("lat=", segments[segment, "lat2"], 
                          "&lng=", segments[segment, "lon2"])
     int2 <- fromJSON(file = paste0(fni.url, fni.parms2))
-    
+
     if (segment == 1) {
       primary.int1 <- int1
       primary.int2 <- int2
     }
-  
+
     if (int1$intersection$distance < 0.001) {
       tmpBlock <- rbind(tmpBlock, 
                         data.frame(segment, street = getStreet(primary, int1$intersection),
@@ -228,25 +229,46 @@ for (tree in 1322:10000) { #nrow(treeMap) managed 6361
     blocks <- rbind(blocks, 
                     cbind(id = nrow(blocks) + 1, primary.street = primary, tmpBlock, count = 1))
     treeMap[tree, "blockId"] <- nrow(blocks)
+  }},
+  error = function(e){
+    Sys.sleep(60*30)
+    tree <- tree - 1
+    print(paste("continuing at", timestamp(quiet = T)))
   }
+)
 }
 ```
-blocks.copy$cross1.lon <- as.numeric(blocks.copy$cross1.lon)
+
+
 
 
 ```r
-map.errs <- get_map(location = paste0(lat.mid, ",", lon.mid), zoom = 12, maptype = "toner-lines")
-maphattan <- get_map(location = "manhattan", zoom = 12, maptype = "toner-lines")
-ggmap(maphattan) + 
-#   geom_point(data = blocks.copy,
-#              aes(x = cross1.lon, y = cross1.lat), alpha = 0.4, color = "blue", size = 3) +
-#  geom_point(data = blocks.copy,
-#              aes(x = cross2.lon, y = cross2.lat), alpha = 0.4, color = "blue", size = 3) +
-  geom_point(data=treeMap[err,], aes(x = lon, y = lat), alpha = 0.4, color = "blue", size = 3) +
-   theme_nothing()
+length(err) 
 ```
 
-####todo fix url rendering below
+```
+## [1] 925
+```
+
+There are a lot of errors, but not too bad relative to the total number of trees mapped (1.44%). The previous post introduced k-means clustering to group a block of trees together. The clustering method helps reduce the amount of manual labor, but the number of clusters has to be conservative, and clusters have to be verified. The starting number of clusters is obtained by dividing the number of errors by the median number of trees per block, resulting in 185 clusters. The idea is that each cluster will map to a block.
+
+
+```r
+map.manh <- get_map(location = "manhattan", zoom = 12, maptype = "toner-lines")
+trees.err <- treeMap[err, ]
+set.seed(123)
+km <- kmeans(cbind(trees.err[, "lat"], trees.err[, "lon"]), 
+             centers = ceiling(length(err)/median(blocks$count)), nstart = 50)
+trees.err$cluster <- as.factor(km$cluster)
+ggmap(map.manh) + 
+   geom_point(data = trees.err,
+              aes(x = lon, y = lat, color = cluster), alpha = 0.4, size = 8) +
+   theme_nothing() 
+```
+
+![](Figs/errors-1.png)
+
+
 [^1]: **New York City Street Tree Map Beta**  
   Interactive map to view details from a city-wide to a single tree level. No official API  
   https://tree-map.nycgovparks.org/points/\<SW lat>\/\<SW lng\>/\<NE lat\>/\<NE lng\>/undefined/
