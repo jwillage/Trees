@@ -161,7 +161,7 @@ tmpBlock <- NULL
 treeMap$blockId <- NULL
 for (tree in 1:nrow(treeMap)) { 
   tryCatch({
-  segments <- getSegments(treeMap[tree, "lat"], treeMap[tree, "lon"])
+  segments <- getSegments(treeMap.err[tree, "lat"], treeMap.err[tree, "lon"])
   primary <- segments[1, "street"]
   tmpBlock <- data.frame()
   for (segment in 1 : nrow(segments)) {
@@ -224,11 +224,11 @@ for (tree in 1:nrow(treeMap)) {
   if (nrow(x) > 0) {
     # block exists
     blocks[blocks$id == x$id, "count"] <- blocks[blocks$id == x$id, "count"] + 1
-    treeMap[tree, "blockId"] <- blocks[blocks$id == x$id, "id"]
+    treeMap.err[tree, "blockId"] <- blocks[blocks$id == x$id, "id"]
   } else{
     blocks <- rbind(blocks, 
                     cbind(id = nrow(blocks) + 1, primary.street = primary, tmpBlock, count = 1))
-    treeMap[tree, "blockId"] <- nrow(blocks)
+    treeMap.err[tree, "blockId"] <- nrow(blocks)
   }},
   error = function(e){
     Sys.sleep(60*30)
