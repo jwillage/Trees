@@ -159,9 +159,10 @@ blocks <- data.frame(id = 1, primary.street = "Clinton St", cross1.segment = 1,
 err <- NULL
 tmpBlock <- NULL
 treeMap$blockId <- NULL
-for (tree in 1:nrow(treeMap)) { 
+for (tree in 385:nrow(todo)) { 
   tryCatch({
-  segments <- getSegments(treeMap.err[tree, "lat"], treeMap.err[tree, "lon"])
+    print(tree)
+  segments <- getSegments(todo[tree, "lat"], todo[tree, "lon"])
   primary <- segments[1, "street"]
   tmpBlock <- data.frame()
   for (segment in 1 : nrow(segments)) {
@@ -224,20 +225,22 @@ for (tree in 1:nrow(treeMap)) {
   if (nrow(x) > 0) {
     # block exists
     blocks[blocks$id == x$id, "count"] <- blocks[blocks$id == x$id, "count"] + 1
-    treeMap.err[tree, "blockId"] <- blocks[blocks$id == x$id, "id"]
+    todo[tree, "blockId"] <- blocks[blocks$id == x$id, "id"]
   } else{
     blocks <- rbind(blocks, 
                     cbind(id = nrow(blocks) + 1, primary.street = primary, tmpBlock, count = 1))
-    treeMap.err[tree, "blockId"] <- nrow(blocks)
+    todo[tree, "blockId"] <- nrow(blocks)
   }},
   error = function(e){
-    Sys.sleep(60*30)
+    print(paste("err on tree", tree, timestamp(quiet = T)))
+    #Sys.sleep(60*30)
     tree <- tree - 1
     print(paste("continuing at", timestamp(quiet = T)))
   }
 )
 }
 ```
+
 
 
 
@@ -268,6 +271,41 @@ ggmap(map.manh) +
 
 ![](Figs/errors-1.png)
 
+
+```r
+map.wall <- get_map(location = "40.705873, -74.013200", zoom = 16, maptype = "toner-lines")
+means <- trees.err %>% group_by(cluster) %>% summarize(lat = mean(lat), lon = mean(lon))
+
+ggmap(map.wall) + 
+   geom_point(data = trees.err,
+              aes(x = lon, y = lat, color = cluster), alpha = 0.4, size = 8) +
+   geom_text(data = means, aes(x = lon, y = lat, label = cluster), size = 8, color = "red4", 
+             alpha = 0.8) +
+   theme_nothing() 
+```
+
+![](Figs/wall street errors-1.png)
+
+Unfortunately this doesn't do a good enough job; clusters are comprised of multiple streets, especially cluster 62. 
+
+
+```r
+set.seed(123)
+km <- kmeans(cbind(trees.err[, "lat"], trees.err[, "lon"]), 
+             centers = ceiling(length(err)/median(blocks$count)) * 2, nstart = 50)
+trees.err$cluster <- as.factor(km$cluster)
+means <- trees.err %>% group_by(cluster) %>% summarize(lat = mean(lat), lon = mean(lon))
+ggmap(map.wall) + 
+   geom_point(data = trees.err,
+              aes(x = lon, y = lat, color = cluster), alpha = 0.4, size = 8) +
+   geom_text(data = means, aes(x = lon, y = lat, label = cluster), size = 8, color = "red4", 
+             alpha = 0.8) +
+   theme_nothing() 
+```
+
+![](Figs/wall street revised-1.png)
+
+Doubling the number of clusters does the job, at least for the financial district. And clusters can always be easily combined. 
 
 [^1]: **New York City Street Tree Map Beta**  
   Interactive map to view details from a city-wide to a single tree level. No official API  
