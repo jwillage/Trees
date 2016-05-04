@@ -459,21 +459,89 @@ blocks[blocks$id == 1315, "count"] <- blocks[blocks$id == 1315, "count"] + 8
 treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(348), "id"], ]$blockId <- 5265
 blocks[blocks$id == 5265, "count"] <- blocks[blocks$id == 5265, "count"] + 5
 
-treeMap[treeMap$id == 116951, ]$blockId <- 2908
+treeMap[treeMap$id == 116951, ]$blockId <- 2908 #cluster 259
 blocks[blocks$id == 2908, "count"] <- blocks[blocks$id == 2908, "count"] + 1
 
-treeMap[treeMap$id == 73239, ]$blockId <- 949
+treeMap[treeMap$id == 73239, ]$blockId <- 949 #cluster 259
 blocks[blocks$id == 949, "count"] <- blocks[blocks$id == 949, "count"] + 1
 
-treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(69), "id"], ]$blockId <- 6702
-blocks[blocks$id == 6702, "count"] <- blocks[blocks$id == 6702, "count"] + 1
+treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(60), "id"], ]$blockId <- 6702
+blocks[blocks$id == 6702, "count"] <- blocks[blocks$id == 6702, "count"] + 2
+
+treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(2, 242, 306, 238, 95, 1, 152, 221), "id"], ]$blockId <- 2865
+blocks[blocks$id == 2865, "count"] <- blocks[blocks$id == 2865, "count"] + 14
+
+treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(244, 228, 256), "id"], ]$blockId <- 1683
+blocks[blocks$id == 1683, "count"] <- blocks[blocks$id == 1683, "count"] + 14
+
+treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(206, 207), "id"], ]$blockId <- 6760
+blocks[blocks$id == 6760, "count"] <- blocks[blocks$id == 6760, "count"] + 3
+
+treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(213), "id"], ]$blockId <- 6681
+blocks[blocks$id == 6681, "count"] <- blocks[blocks$id == 6681, "count"] + 2
+
+treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(187) & trees.err$cluster2 == 1, "id"], ]$blockId <- 3033
+blocks[blocks$id == 3033, "count"] <- blocks[blocks$id == 3033, "count"] + 3
+
+treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(187) & trees.err$cluster2 == 2, "id"], ]$blockId <- 3412
+blocks[blocks$id == 3412, "count"] <- blocks[blocks$id == 3412, "count"] + 1
+
+blocks <- rbind(blocks, 
+                cbind(id = nrow(blocks) + 1, primary.street = "Amsterdam Ave", cross1.segment = "NA", 
+                      cross1.street = "Audubon Ave", cross1.lat = "40.857152",
+                      cross1.lon = "-73.927394", cross2.segment = "NA", cross2.street = "W 190th St", 
+                      cross2.lat = "40.8537356",  cross2.lon = "73.9268361", count = 4))
+treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(194), "id"], ]$blockId <- nrow(blocks)
+
+blocks <- rbind(blocks, 
+                cbind(id = nrow(blocks) + 1, primary.street = "Laurel Hill Ter", cross1.segment = "NA", 
+                      cross1.street = "Amsterdam Ave", cross1.lat = "40.8485033",
+                      cross1.lon = "-73.930589", cross2.segment = "NA", cross2.street = "W 186th St", 
+                      cross2.lat = "40.8507088",  cross2.lon = "73.9275417", count = 9))
+treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(253, 328, 326, 138), "id"], ]$blockId <- nrow(blocks) 
+
+treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(174) & trees.err$cluster2 == 1, "id"], ]$blockId <- 5608
+blocks[blocks$id == 5608, "count"] <- blocks[blocks$id == 5608, "count"] + 1
+
+treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(174) & trees.err$cluster2 == 2, "id"], ]$blockId <- 2297
+blocks[blocks$id == 2297, "count"] <- blocks[blocks$id == 2297, "count"] + 1
+
+treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(174) & trees.err$cluster2 == 3, "id"], ]$blockId <- 311
+blocks[blocks$id == 311, "count"] <- blocks[blocks$id == 311, "count"] + 2
+
+treeMap[treeMap$id == 85830, ]$blockId <- 3209 #cluster 200
+blocks[blocks$id == 3209, "count"] <- blocks[blocks$id == 3209, "count"] + 1
+
+treeMap[treeMap$id == 263575, ]$blockId <- 742 #cluster 200
+blocks[blocks$id == 742, "count"] <- blocks[blocks$id == 742, "count"] + 1
+
+blocks <- rbind(blocks, 
+                cbind(id = nrow(blocks) + 1, primary.street = "Harlem River Dr", cross1.segment = "NA", 
+                      cross1.street = "W 155th St", cross1.lat = "40.829194",
+                      cross1.lon = "-73.9372833", cross2.segment = "NA", cross2.street = "W 155th St", 
+                      cross2.lat = "40.8283416",  cross2.lon = "73.9351877", count = 3))
+treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(49), "id"], ]$blockId <- nrow(blocks) 
+
+treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(233, 361, 181, 344, 101, 274, 331, 164, 129, 364), "id"], ]$blockId <- 7108
+blocks[blocks$id == 7108, "count"] <- blocks[blocks$id == 7108, "count"] + 22
+
+treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(98), "id"], ]$blockId <- 4548
+blocks[blocks$id == 4548, "count"] <- blocks[blocks$id == 7108, "count"] + 3
+
+treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(71), "id"], ]$blockId <- 781
+blocks[blocks$id == 781, "count"] <- blocks[blocks$id == 781, "count"] + 1
+
+treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(139, 272), "id"], ]$blockId <- 4506
+blocks[blocks$id == 4506, "count"] <- blocks[blocks$id == 4506, "count"] + 3
 
 
 
 # 255, 219, 116, 254, 324, 64, 241, 45, 61, 107, 215, 24, 175, 355, 173, 59, 209, 358, 257, 9, 360, 
 # 16, 186, 170, 252, 68, 112, 120, 240, 162, 39, 128, 143, 356, 76, 178, 279, 29, 3, 293, 229, 184,
-# 325, 339, 225, 211, 340, 149, 338, 123, 165, 237, 62, 265, 26, 226, 190, 203, 176, 303, 227, 134
-# 336, 79, 198, 270, 192, 151, 330, 163, 297, 17, 195, 304, 104, 117, 6, 295, 317, 121, 220, 172, 11, 124
-# 90, 159, 243, 212, 345, 37, 311, 287, 125, 92, 197, 40, 88, 168, 332, 202, 148, 96, 93, 160, 113
-# 309, 32, 234, 341, 327, 343, 126, 118, 185, 106, 135, 288, 36, 87, 307, 5, 167, 321, 161, 153, 63
-# 108, 21, 78, 348, 259
+# 325, 339, 225, 211, 340, 149, 338, 123, 165, 237, 62, 313, 265, 26, 226, 190, 203, 176, 303, 227, 134,
+# 336, 79, 198, 270, 192, 151, 330, 163, 297, 17, 195, 304, 104, 177, 6, 295, 317, 121, 220, 172, 11, 124,
+# 90, 159, 243, 212, 345, 37, 311, 287, 125, 92, 197, 40, 88, 168, 332, 202, 148, 96, 93, 160, 113,
+# 309, 32, 234, 341, 327, 343, 126, 118, 185, 106, 135, 288, 36, 87, 307, 5, 167, 321, 161, 153, 63,
+# 108, 21, 78, 348, 259, 60, 2, 242, 306, 238, 95, 1, 152, 221, 244, 228, 256, 206, 207, 213, 187, 
+# 194, 253, 328, 326, 138, 174, 200, 49, 233, 361, 181, 344, 101, 274, 331, 164, 129, 364, 98, 71
+# 139, 272
