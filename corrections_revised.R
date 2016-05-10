@@ -578,7 +578,7 @@ blocks[blocks$id == 3108, "count"] <- blocks[blocks$id == 3108, "count"] + 1
 treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(313), "id"], ]$blockId <- 6110
 blocks[blocks$id == 6110, "count"] <- blocks[blocks$id == 6110, "count"] + 3
 
-then do jumble below 222
+then do jumble below 222. also move zoom + figs into the revised rmd and out of the root trees folder
 
 
 # 255, 219, 116, 254, 324, 64, 241, 45, 61, 107, 215, 24, 175, 355, 173, 59, 209, 358, 257, 9, 360, 

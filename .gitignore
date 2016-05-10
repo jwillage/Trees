@@ -11,6 +11,6 @@ rmd/*/*.web.md
 process.png
 geonames.txt
 zooms_cache/
-zooms.Rmd
+*zooms.Rmd
 
 
