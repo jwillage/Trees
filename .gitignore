@@ -10,4 +10,7 @@ rmd/*/*.web.md
 .Rproj.user
 process.png
 geonames.txt
+zooms_cache/
+zooms.Rmd
+
 

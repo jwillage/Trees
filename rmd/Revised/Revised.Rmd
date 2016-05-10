@@ -258,7 +258,6 @@ ggmap(map.manh) +
 ```{r wall street errors}
 map.wall <- get_map(location = "40.705873, -74.013200", zoom = 16, maptype = "toner-lines")
 means <- trees.err %>% group_by(cluster) %>% summarize(lat = mean(lat), lon = mean(lon))
-
 ggmap(map.wall) + 
    geom_point(data = trees.err,
               aes(x = lon, y = lat, color = cluster), alpha = 0.4, size = 8) +
@@ -278,12 +277,15 @@ means <- trees.err %>% group_by(cluster) %>% summarize(lat = mean(lat), lon = me
 ggmap(map.wall) + 
    geom_point(data = trees.err,
               aes(x = lon, y = lat, color = cluster), alpha = 0.4, size = 8) +
-   geom_text(data = means, aes(x = lon, y = lat, label = cluster), size = 8, color = "red4", 
+   geom_text(data = means, aes(x = lon, y = lat, label = cluster), size = 7, color = "red4", 
              alpha = 0.8) +
    theme_nothing() 
 ```
 
 Doubling the number of clusters does the job, at least for the financial district. And clusters can always be easily combined. 
+
+###todo
+Group blocks by primary, secondary streets, keeping only 1 set of coordinates. 
 
 [^1]: **New York City Street Tree Map Beta**  
   Interactive map to view details from a city-wide to a single tree level. No official API  
