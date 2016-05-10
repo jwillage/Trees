@@ -307,6 +307,8 @@ ggmap(map.wall) +
 Doubling the number of clusters does the job, at least for the financial district. And clusters can always be easily combined. 
 
 
+Group blocks by primary, secondary streets, keeping only 1 set of coordinates. 
+
 [^1]: **New York City Street Tree Map Beta**  
   Interactive map to view details from a city-wide to a single tree level. No official API  
   https://tree-map.nycgovparks.org/points/\<SW lat>\/\<SW lng\>/\<NE lat\>/\<NE lng\>/undefined/
