@@ -1,6 +1,6 @@
-# Revised
+# Zooms
 Joe Willage  
-May 9, 2016  
+May 18, 2016  
 
 
 
@@ -294,3 +294,112 @@ ggmap(map.x) +
 ```
 
 ![](Figs/crack is whack playground-1.png)
+
+
+
+```r
+map.x <- get_map(location = "40.8004201,-73.9482805", zoom = 17, maptype = "toner-lines")
+ggmap(map.x) + 
+   geom_point(data = trees.err,
+              aes(x = lon, y = lat, color = cluster), alpha = 0.4, size = 8) +
+   geom_text(data = means, aes(x = lon, y = lat, label = cluster), size = 3, color = "red4", 
+             alpha = 0.8) +
+   theme_nothing()
+```
+
+![](Figs/central park north-1.png)
+
+
+
+
+```r
+map.x <- get_map(location = "40.7948233,-73.93585747", zoom = 17, maptype = "toner-lines")
+ggmap(map.x) + 
+   geom_point(data = trees.err,
+              aes(x = lon, y = lat, color = cluster), alpha = 0.4, size = 8) +
+   geom_text(data = means, aes(x = lon, y = lat, label = cluster), size = 3, color = "red4", 
+             alpha = 0.8) +
+   theme_nothing()
+```
+
+![](Figs/e harlem-1.png)
+
+
+
+```r
+map.x <- get_map(location = "40.7781067,-73.9478898", zoom = 16, maptype = "toner-lines")
+ggmap(map.x) + 
+  geom_text(data = means, aes(x = lon, y = lat, label = cluster), size = 6, color = rainbow(368), 
+             alpha = 0.6) +
+   theme_nothing()
+```
+
+![](Figs/gracie mansion-1.png)
+
+
+
+```r
+map.x <- get_map(location = "40.7671719,-73.9528957", zoom = 17, maptype = "toner-lines")
+ggmap(map.x) + 
+   geom_point(data = trees.err,
+              aes(x = lon, y = lat, color = cluster), alpha = 0.4, size = 8) +
+   geom_text(data = means, aes(x = lon, y = lat, label = cluster), size = 4, color = "red4", 
+             alpha = 0.8) +
+   theme_nothing()
+```
+
+![](Figs/john jay park-1.png)
+
+
+
+```r
+map.x <- get_map(location = "40.7603703,-73.9632232", zoom = 17, maptype = "toner-lines")
+ggmap(map.x) + 
+   geom_text(data = means, aes(x = lon, y = lat, label = cluster), size = 5, color = rainbow(368), 
+             alpha = 0.8) +
+   theme_nothing()
+```
+
+![](Figs/queensboro bridge-1.png)
+
+
+
+```r
+map.x <- get_map(location = "40.7351361,-73.9781837", zoom = 17, maptype = "toner-lines")
+ggmap(map.x) + 
+   geom_point(data = trees.err,
+              aes(x = lon, y = lat, color = cluster), alpha = 0.4, size = 8) +
+   geom_text(data = means, aes(x = lon, y = lat, label = cluster), size = 4, color = "red4", 
+             alpha = 0.8) +
+   theme_nothing()
+```
+
+![](Figs/peter cooper village-1.png)
+
+
+
+```r
+map.x <- get_map(location = "40.7134994,-73.9838977", zoom = 16, maptype = "toner-lines")
+ggmap(map.x) + 
+   geom_text(data = means, aes(x = lon, y = lat, label = cluster), size = 6, color = rainbow(368), 
+             alpha = 0.8) +
+   theme_nothing()
+```
+
+![](Figs/les-1.png)
+
+
+```r
+map.x <- get_map(location = "40.7112048,-74.005213", zoom = 17, maptype = "toner-lines")
+ggmap(map.x) + 
+  # geom_point(data = trees.err,
+  #            aes(x = lon, y = lat, color = cluster), alpha = 0.4, size = 8) +
+   geom_text(data = means, aes(x = lon, y = lat, label = cluster), size = 6, color = rainbow(368), 
+             alpha = 0.8) +
+   theme_nothing()
+```
+
+![](Figs/brooklyn bridge-1.png)
+
+
+

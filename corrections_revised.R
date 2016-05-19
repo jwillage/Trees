@@ -3,50 +3,43 @@ blocks <- rbind(blocks, cbind(id = nrow(blocks) + 1, primary.street = "Whitehall
                       cross1.street = "South St", cross1.lat = "40.7015313",
                       cross1.lon = "-74.0125451", cross2.segment = "NA", cross2.street = "Water St", 
                       cross2.lat = "40.7024253",  cross2.lon = "-74.0128533", count = 6))
-treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(255, 219, 116), "id"], ]$blockId <- 
-  nrow(blocks)
+treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(255, 219, 116), "id"], ]$blockId <- nrow(blocks)
 
 blocks <- rbind(blocks, cbind(id = nrow(blocks) + 1, primary.street = "South St", cross1.segment = "NA", 
                       cross1.street = "Broad St", cross1.lat = "40.7018033",
                       cross1.lon = "-74.0111941", cross2.segment = "NA", cross2.street = "Old Slip", 
                       cross2.lat = "40.7032022",  cross2.lon = "-74.0080238", count = 5))
-treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(254, 324), "id"], ]$blockId <- 
-  nrow(blocks)
+treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(254, 324), "id"], ]$blockId <- nrow(blocks)
 
 blocks <- rbind(blocks, cbind(id = nrow(blocks) + 1, primary.street = "Coenties Alley", cross1.segment = "NA", 
                       cross1.street = "Pearl St", cross1.lat = "40.7038257",
                       cross1.lon = "-74.0105122", cross2.segment = "NA", cross2.street = "Stone St", 
                       cross2.lat = "40.7041258",  cross2.lon = "-74.0106996", count = 2))
-treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(64), "id"], ]$blockId <- 
-  nrow(blocks)
+treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(64), "id"], ]$blockId <- nrow(blocks)
 
 blocks <- rbind(blocks, cbind(id = nrow(blocks) + 1, primary.street = "Greenwich St", cross1.segment = "NA", 
                       cross1.street = "Battery Pl", cross1.lat = "40.704831",
                       cross1.lon = "-74.0149741", cross2.segment = "NA", cross2.street = "Morris St", 
                       cross2.lat = "40.7062918",  cross2.lon = "-74.0142904", count = 2))
-treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(241), "id"], ]$blockId <- 
-  nrow(blocks)
+treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(241), "id"], ]$blockId <- nrow(blocks)
 
 blocks <- rbind(blocks, cbind(id = nrow(blocks) + 1, primary.street = "Washington St", cross1.segment = "NA", 
                       cross1.street = "Battery Pl", cross1.lat = "40.7049542",
                       cross1.lon = "-74.0156551", cross2.segment = "NA", cross2.street = "Morris St", 
                       cross2.lat = "40.7064688",  cross2.lon = "-74.0151112", count = 4))
-treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(45, 61, 107), "id"], ]$blockId <- 
-  nrow(blocks)
+treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(45, 61, 107), "id"], ]$blockId <- nrow(blocks)
 
 blocks <- rbind(blocks, cbind(id = nrow(blocks) + 1, primary.street = "West St", cross1.segment = "NA", 
                       cross1.street = "Battery Pl", cross1.lat = "40.7049041",
                       cross1.lon = "-74.016429", cross2.segment = "NA", cross2.street = "Morris St", 
                       cross2.lat = "40.7066631",  cross2.lon = "-74.0159777", count = 2))
-treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(215), "id"], ]$blockId <- 
-  nrow(blocks)
+treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(215), "id"], ]$blockId <- nrow(blocks)
 
 blocks <- rbind(blocks, cbind(id = nrow(blocks) + 1, primary.street = "Trinity Pl", cross1.segment = "NA", 
                       cross1.street = "Edgar St", cross1.lat = "40.7069113",
                       cross1.lon = "-74.0135642", cross2.segment = "NA", cross2.street = "Morris St", 
                       cross2.lat = "40.7062859",  cross2.lon = "-74.0142797", count = 8))
-treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(24, 175), "id"], ]$blockId <- 
-  nrow(blocks)
+treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(24, 175), "id"], ]$blockId <- nrow(blocks)
 
 treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(355), "id"], ]$blockId <- 6133
 
@@ -578,8 +571,455 @@ blocks[blocks$id == 3108, "count"] <- blocks[blocks$id == 3108, "count"] + 1
 treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(313), "id"], ]$blockId <- 6110
 blocks[blocks$id == 6110, "count"] <- blocks[blocks$id == 6110, "count"] + 3
 
-then do jumble below 222. also move zoom + figs into the revised rmd and out of the root trees folder
+blocks <- rbind(blocks, cbind(id = nrow(blocks) + 1, primary.street = "2nd Ave", cross1.segment = "NA", 
+                              cross1.street = "E 127th St", cross1.lat = "40.8043784",
+                              cross1.lon = "-73.932414", cross2.segment = "NA", cross2.street = "E 128th St", 
+                              cross2.lat = "40.8040052",  cross2.lon = "73.9320839", count = 9))
+treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(57, 283, 305, 56, 281), "id"], ]$blockId <- nrow(blocks) 
 
+blocks <- rbind(blocks, cbind(id = nrow(blocks) + 1, primary.street = "2nd Ave", cross1.segment = "NA", 
+                              cross1.street = "E 127th St", cross1.lat = "40.8043784",
+                              cross1.lon = "-73.932414", cross2.segment = "NA", cross2.street = "Harlem River Dr", 
+                              cross2.lat = "40.8040638",  cross2.lon = "73.9312188", count = 6))
+treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(77, 201), "id"], ]$blockId <- nrow(blocks) 
+
+treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(169, 146, 154, 363), "id"], ]$blockId <- 5983
+blocks[blocks$id == 5983, "count"] <- blocks[blocks$id == 5983, "count"] + 7
+
+blocks <- rbind(blocks, cbind(id = nrow(blocks) + 1, primary.street = "1st Ave", cross1.segment = "NA", 
+                              cross1.street = "E 126th St", cross1.lat = "40.8025373",
+                              cross1.lon = "-73.9308857", cross2.segment = "NA", cross2.street = "E 127th St", 
+                              cross2.lat = "40.8032266",  cross2.lon = "73.9307484", count = 1))
+treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(262), "id"], ]$blockId <- nrow(blocks) 
+
+blocks <- rbind(blocks, cbind(id = nrow(blocks) + 1, primary.street = "E 125th St", cross1.segment = "NA", 
+                              cross1.street = "1st Ave", cross1.lat = "40.8018336",
+                              cross1.lon = "-73.9313603", cross2.segment = "NA", cross2.street = "2nd Ave", 
+                              cross2.lat = "40.8027672",  cross2.lon = "73.9335628", count = 2))
+treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(117), "id"], ]$blockId <- nrow(blocks) 
+
+treeMap[treeMap$id == 241565, "blockId"] <- 8013 #cluster 271
+blocks[blocks$id == 8013, "count"] <- blocks[blocks$id == 8013, "count"] + 1
+
+treeMap[treeMap$id == 243249, "blockId"] <- 4113  #cluster 271
+blocks[blocks$id == 4113, "count"] <- blocks[blocks$id == 4113, "count"] + 1
+
+treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(299, 142), "id"], ]$blockId <- 3911
+blocks[blocks$id == 3911, "count"] <- blocks[blocks$id == 3911, "count"] + 5
+
+treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(145), "id"], ]$blockId <- 4816
+blocks[blocks$id == 4816, "count"] <- blocks[blocks$id == 4816, "count"] + 1
+
+treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(20), "id"], ]$blockId <- 7138
+blocks[blocks$id == 7138, "count"] <- blocks[blocks$id == 7138, "count"] + 2
+
+treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(171), "id"], ]$blockId <- 993
+blocks[blocks$id == 993, "count"] <- blocks[blocks$id == 993, "count"] + 1
+
+treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(111), "id"], ]$blockId <- 3756
+blocks[blocks$id == 3756, "count"] <- blocks[blocks$id == 3756, "count"] + 2
+
+treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(85), "id"], ]$blockId <- 886
+blocks[blocks$id == 886, "count"] <- blocks[blocks$id == 886, "count"] + 7
+
+treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(80, 83), "id"], ]$blockId <- 5562
+blocks[blocks$id == 5562, "count"] <- blocks[blocks$id == 5562, "count"] + 3
+
+treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(99, 312), "id"], ]$blockId <- 5709
+blocks[blocks$id == 5709, "count"] <- blocks[blocks$id == 5709, "count"] + 3
+
+treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(34, 354, 41, 122), "id"], ]$blockId <- 5554
+blocks[blocks$id == 5554, "count"] <- blocks[blocks$id == 5554, "count"] + 6
+
+treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(18, 114, 130, 7, 316), "id"], ]$blockId <- 5551
+blocks[blocks$id == 5551, "count"] <- blocks[blocks$id == 5551, "count"] + 8
+
+blocks <- rbind(blocks, cbind(id = nrow(blocks) + 1, primary.street = "W 110th St", cross1.segment = "NA", 
+                              cross1.street = "Duke Ellington Cir", cross1.lat = "40.7971026",
+                              cross1.lon = "-73.9497339", cross2.segment = "NA", cross2.street = "Lenox Ave", 
+                              cross2.lat = "40.7982164",  cross2.lon = "73.9524006", count = 3))
+treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(132), "id"], ]$blockId <- nrow(blocks) 
+
+treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(275), "id"], ]$blockId <- 5160
+blocks[blocks$id == 5160, "count"] <- blocks[blocks$id == 5160, "count"] + 3
+
+km <- kmeans(cbind(trees.err[trees.err$cluster == 308, "lat"], 
+                   trees.err[trees.err$cluster == 308, "lon"]), centers = 2, nstart = 50)
+trees.err[trees.err$cluster == 308, "cluster2"] <- as.factor(km$cluster)
+blocks <- rbind(blocks, cbind(id = nrow(blocks) + 1, primary.street = "E 116th St", cross1.segment = "NA", 
+                              cross1.street = "2nd Ave", cross1.lat = "40.7970397",
+                              cross1.lon = "-73.937793", cross2.segment = "NA", cross2.street = "3rd Ave", 
+                              cross2.lat = "40.7979563",  cross2.lon = "73.9400123", count = 4))
+treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(308) & trees.err$cluster2 == 1, "id"], ]$blockId <- nrow(blocks) 
+
+treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(308) & trees.err$cluster2 == 2, "id"], ]$blockId <- 5669
+blocks[blocks$id == 5669, "count"] <- blocks[blocks$id == 5669, "count"] + 2
+
+treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(38), "id"], ]$blockId <- 895
+blocks[blocks$id == 895, "count"] <- blocks[blocks$id == 895, "count"] + 1
+
+blocks <- rbind(blocks, cbind(id = nrow(blocks) + 1, primary.street = "E 113th St", cross1.segment = "NA", 
+                              cross1.street = "1st Ave", cross1.lat = "40.7946114",
+                              cross1.lon = "-73.9380755", cross2.segment = "NA", cross2.street = "2nd Ave", 
+                              cross2.lat = "40.7950701",  cross2.lon = "73.9391626", count = 1))
+treeMap[treeMap$id == 268577, "blockId"] <- nrow(blocks) # cluster 46
+
+treeMap[treeMap$id == 232308, "blockId"] <- 7752 # cluster 46
+blocks[blocks$id == 7752, "count"] <- blocks[blocks$id == 7752, "count"] + 1
+
+treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(315), "id"], ]$blockId <- 4849
+blocks[blocks$id == 4849, "count"] <- blocks[blocks$id == 4849, "count"] + 2
+
+blocks <- rbind(blocks, cbind(id = nrow(blocks) + 1, primary.street = "E 116th St", cross1.segment = "NA", 
+                              cross1.street = "1st Ave", cross1.lat = "40.7959907",
+                              cross1.lon = "-73.9354204", cross2.segment = "NA", cross2.street = "2nd Ave", 
+                              cross2.lat = "40.7970397",  cross2.lon = "73.937793", count = 13))
+treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(349, 260, 196, 102, 353), "id"], ]$blockId <- nrow(blocks)
+
+treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(89, 25, 22, 232), "id"], ]$blockId <- 776
+blocks[blocks$id == 776, "count"] <- blocks[blocks$id == 776, "count"] + 10
+
+treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(284), "id"], ]$blockId <- 3902
+blocks[blocks$id == 3902, "count"] <- blocks[blocks$id == 3902, "count"] + 4
+
+treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(282), "id"], ]$blockId <- 4733
+blocks[blocks$id == 4733, "count"] <- blocks[blocks$id == 4733, "count"] + 1
+
+blocks <- rbind(blocks, cbind(id = nrow(blocks) + 1, primary.street = "E 116th St", cross1.segment = "NA", 
+                              cross1.street = "1st Ave", cross1.lat = "40.7959907",
+                              cross1.lon = "-73.9354204", cross2.segment = "NA", cross2.street = "2nd Ave", 
+                              cross2.lat = "40.7970397",  cross2.lon = "73.937793", count = 13))
+treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(349, 260, 196, 102, 353), "id"], ]$blockId <- nrow(blocks)
+
+blocks <- rbind(blocks, cbind(id = nrow(blocks) + 1, primary.street = "New St", cross1.segment = "NA", 
+                              cross1.street = "E 110th St", cross1.lat = "40.7918123",
+                              cross1.lon = "-73.9372153", cross2.segment = "NA", cross2.street = "E 111th St", 
+                              cross2.lat = "40.7924012",  cross2.lon = "73.936813", count = 5))
+treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(230, 84), "id"], ]$blockId <- nrow(blocks)
+
+treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(204, 44, 8), "id"], ]$blockId <- 7024
+blocks[blocks$id == 7024, "count"] <- blocks[blocks$id == 7024, "count"] + 12
+
+treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(301), "id"], ]$blockId <- 5502
+blocks[blocks$id == 5502, "count"] <- blocks[blocks$id == 5502, "count"] + 3
+
+blocks <- rbind(blocks, cbind(id = nrow(blocks) + 1, primary.street = "F D R Dr", cross1.segment = "NA", 
+                              cross1.street = "E 106th St", cross1.lat = "40.7887174",
+                              cross1.lon = "-73.9378758", cross2.segment = "NA", cross2.street = "E 110th St", 
+                              cross2.lat = "40.7913337",  cross2.lon = "73.9360921", count = 5))
+treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(370), "id"], ]$blockId <- nrow(blocks)
+
+treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(179), "id"], ]$blockId <- 6368
+blocks[blocks$id == 6368, "count"] <- blocks[blocks$id == 6368, "count"] + 2
+
+treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(52), "id"], ]$blockId <- 2856
+blocks[blocks$id == 2856, "count"] <- blocks[blocks$id == 2856, "count"] + 4
+
+treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(319), "id"], ]$blockId <- 7682
+blocks[blocks$id == 7682, "count"] <- blocks[blocks$id == 7682, "count"] + 1
+
+treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(208), "id"], ]$blockId <- 7853
+blocks[blocks$id == 7853, "count"] <- blocks[blocks$id == 7853, "count"] + 1
+
+treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(188), "id"], ]$blockId <- 3274
+blocks[blocks$id == 3274, "count"] <- blocks[blocks$id == 3274, "count"] + 2
+
+treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(31, 369), "id"], ]$blockId <- 5050
+blocks[blocks$id == 5050, "count"] <- blocks[blocks$id == 5050, "count"] + 6
+
+treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(266, 239, 97, 268, 278), "id"], ]$blockId <- 2733
+blocks[blocks$id == 2733, "count"] <- blocks[blocks$id == 2733, "count"] + 10
+
+treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(166, 36, 199, 81), "id"], ]$blockId <- 194
+blocks[blocks$id == 194, "count"] <- blocks[blocks$id == 194, "count"] + 9
+
+treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(30, 264, 367, 50, 236), "id"], ]$blockId <- 2070
+blocks[blocks$id == 2070, "count"] <- blocks[blocks$id == 2070, "count"] + 8
+
+treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(105), "id"], ]$blockId <- 4985
+blocks[blocks$id == 4985, "count"] <- blocks[blocks$id == 4985, "count"] + 8
+
+treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(48, 69, 14, 35, 323), "id"], ]$blockId <- 6460
+blocks[blocks$id == 6460, "count"] <- blocks[blocks$id == 6460, "count"] + 10
+
+treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(110), "id"], ]$blockId <- 1155
+blocks[blocks$id == 1155, "count"] <- blocks[blocks$id == 1155, "count"] + 1
+
+km <- kmeans(cbind(trees.err[trees.err$cluster == 359, "lat"], 
+                   trees.err[trees.err$cluster == 359, "lon"]), centers = 2, nstart = 50)
+trees.err[trees.err$cluster == 359, "cluster2"] <- as.factor(km$cluster)
+treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(359) & trees.err$cluster2 == 2, "id"], ]$blockId <- 811
+blocks[blocks$id == 811, "count"] <- blocks[blocks$id == 811, "count"] + 1
+
+treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(359) & trees.err$cluster2 == 1, "id"], ]$blockId <- 4176
+blocks[blocks$id == 4176, "count"] <- blocks[blocks$id == 4176, "count"] + 1
+
+treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(193), "id"], ]$blockId <- 2016
+blocks[blocks$id == 2016, "count"] <- blocks[blocks$id == 2016, "count"] + 2
+
+blocks <- rbind(blocks, cbind(id = nrow(blocks) + 1, primary.street = "F D R Dr", cross1.segment = "NA", 
+                              cross1.street = "E 79th St", cross1.lat = "40.7703207",
+                              cross1.lon = "-73.9478153", cross2.segment = "NA", cross2.street = "E 81st St", 
+                              cross2.lat = "40.771508",  cross2.lon = "73.9466669", count = 2))
+treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(66), "id"], ]$blockId <- nrow(blocks)
+
+km <- kmeans(cbind(trees.err[trees.err$cluster == 72, "lat"], 
+                   trees.err[trees.err$cluster == 72, "lon"]), centers = 3, nstart = 50)
+trees.err[trees.err$cluster == 72, "cluster2"] <- as.factor(km$cluster)
+treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(72) & trees.err$cluster2 == 1, "id"], ]$blockId <- 1356
+blocks[blocks$id == 1356, "count"] <- blocks[blocks$id == 1356, "count"] + 2
+
+treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(72) & trees.err$cluster2 == 2, "id"], ]$blockId <- 2962
+blocks[blocks$id == 2962, "count"] <- blocks[blocks$id == 2962, "count"] + 1
+
+treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(72) & trees.err$cluster2 == 3, "id"], ]$blockId <- 350
+blocks[blocks$id == 350, "count"] <- blocks[blocks$id == 350, "count"] + 1
+
+treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(366), "id"], ]$blockId <- 2845
+blocks[blocks$id == 2845, "count"] <- blocks[blocks$id == 2845, "count"] + 5
+
+treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(276, 136), "id"], ]$blockId <- 2542
+blocks[blocks$id == 2542, "count"] <- blocks[blocks$id == 2542, "count"] + 3
+
+blocks <- rbind(blocks, cbind(id = nrow(blocks) + 1, primary.street = "E 73rd St", cross1.segment = "NA", 
+                              cross1.street = "F D R Dr", cross1.lat = "40.7665791",
+                              cross1.lon = "-73.9510098", cross2.segment = "NA", cross2.street = "York Ave", 
+                              cross2.lat = "40.7675462",  cross2.lon = "73.9532421", count = 4))
+treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(114, 119), "id"], ]$blockId <- nrow(blocks)
+
+blocks <- rbind(blocks, cbind(id = nrow(blocks) + 1, primary.street = "E 72nd St", cross1.segment = "NA", 
+                              cross1.street = "F D R Dr", cross1.lat = "40.7660623",
+                              cross1.lon = "-73.9518376", cross2.segment = "NA", cross2.street = "York Ave", 
+                              cross2.lat = "40.7668459",  cross2.lon = "73.9537484", count = 31))
+treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(205, 351, 250, 115, 183, 131), "id"], ]$blockId <- nrow(blocks)
+
+blocks <- rbind(blocks, cbind(id = nrow(blocks) + 1, primary.street = "E 71st St", cross1.segment = "NA", 
+                              cross1.street = "F D R Dr", cross1.lat = "40.765282",
+                              cross1.lon = "-73.952151", cross2.segment = "NA", cross2.street = "York Ave", 
+                              cross2.lat = "40.766151",  cross2.lon = "73.9542263", count = 6))
+treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(352), "id"], ]$blockId <- nrow(blocks)
+
+blocks <- rbind(blocks, cbind(id = nrow(blocks) + 1, primary.street = "Ed Koch Queensboro Brg Ext", cross1.segment = "NA", 
+                              cross1.street = "E 60th St", cross1.lat = "40.7608568",
+                              cross1.lon = "-73.9629081", cross2.segment = "NA", cross2.street = "E 63rd St", 
+                              cross2.lat = "40.762689",  cross2.lon = "73.9615762", count = 16))
+treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(210, 218, 261, 337, 19, 333, 140), "id"], ]$blockId <- nrow(blocks)
+
+blocks <- rbind(blocks, cbind(id = nrow(blocks) + 1, primary.street = "E 61st St", cross1.segment = "NA", 
+                              cross1.street = "1st Ave", cross1.lat = "40.7608706",
+                              cross1.lon = "-73.9610813", cross2.segment = "NA", cross2.street = "Ed Koch Queensboro Brg Ext", 
+                              cross2.lat = "40.7614354",  cross2.lon = "73.9624492", count = 1))
+treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(103), "id"], ]$blockId <- nrow(blocks)
+
+blocks <- rbind(blocks, cbind(id = nrow(blocks) + 1, primary.street = "E 60th St", cross1.segment = "NA", 
+                              cross1.street = "2nd Ave", cross1.lat = "40.7612177",
+                              cross1.lon = "-73.963888", cross2.segment = "NA", cross2.street = "Ed Koch Queensboro Brg Ext", 
+                              cross2.lat = "40.7608357",  cross2.lon = "73.9629009", count = 3))
+treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(109), "id"], ]$blockId <- nrow(blocks)
+
+treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(137), "id"], ]$blockId <- 1022
+blocks[blocks$id == 1022, "count"] <- blocks[blocks$id == 1022, "count"] + 1
+
+treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(294, 75), "id"], ]$blockId <- 2661
+blocks[blocks$id == 2661, "count"] <- blocks[blocks$id == 2661, "count"] + 8
+
+blocks <- rbind(blocks, cbind(id = nrow(blocks) + 1, primary.street = "E 49th St", cross1.segment = "NA", 
+                              cross1.street = "1st Ave", cross1.lat = "40.7532236",
+                              cross1.lon = "-73.9665495", cross2.segment = "NA", cross2.street = "F D R Dr", 
+                              cross2.lat = "40.7524799",  cross2.lon = "73.9648248", count = 3))
+treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(296, 42), "id"], ]$blockId <- nrow(blocks)
+
+treeMap[treeMap$id %in% c(213617, 227771, 247745), ]$blockId <- 1156 # cluster 322
+blocks[blocks$id == 1156, "count"] <- blocks[blocks$id == 1156, "count"] + 3
+
+treeMap[treeMap$id %in% c(263429, 288099, 222567, 213630, 260158), ]$blockId <- 8173 # cluster 322
+blocks[blocks$id == 8173, "count"] <- blocks[blocks$id == 8173, "count"] + 5
+
+treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(27), "id"], ]$blockId <- 229
+blocks[blocks$id == 229, "count"] <- blocks[blocks$id == 229, "count"] + 2
+
+blocks <- rbind(blocks, cbind(id = nrow(blocks) + 1, primary.street = "W 35th St", cross1.segment = "NA", 
+                              cross1.street = "5th Ave", cross1.lat = "40.7491081",
+                              cross1.lon = "-73.9840749", cross2.segment = "NA", cross2.street = "6th Ave", 
+                              cross2.lat = "40.7504555",  cross2.lon = "73.9872782", count = 2))
+treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(15), "id"], ]$blockId <- nrow(blocks)
+
+treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(346), "id"], ]$blockId <- 988
+blocks[blocks$id == 988, "count"] <- blocks[blocks$id == 988, "count"] + 1
+
+treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(357), "id"], ]$blockId <- 5442
+blocks[blocks$id == 5442, "count"] <- blocks[blocks$id == 5442, "count"] + 2
+
+blocks <- rbind(blocks, cbind(id = nrow(blocks) + 1, primary.street = "E 25th St", cross1.segment = "NA", 
+                              cross1.street = "3rd Ave", cross1.lat = "40.7401109",
+                              cross1.lon = "-73.982215", cross2.segment = "NA", cross2.street = "Lexington Ave", 
+                              cross2.lat = "40.7407587",  cross2.lon = "73.9837954", count = 1))
+treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(246), "id"], ]$blockId <- nrow(blocks)
+
+treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(28), "id"], ]$blockId <- 736
+blocks[blocks$id == 736, "count"] <- blocks[blocks$id == 736, "count"] + 3
+
+treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(133), "id"], ]$blockId <- 3831
+blocks[blocks$id == 3831, "count"] <- blocks[blocks$id == 3831, "count"] + 3
+
+treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(334), "id"], ]$blockId <- 7034
+blocks[blocks$id == 7034, "count"] <- blocks[blocks$id == 7034, "count"] + 2
+
+treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(94, 47, 189, 248), "id"], ]$blockId <- 3140
+blocks[blocks$id == 3140, "count"] <- blocks[blocks$id == 3140, "count"] + 10
+
+treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(300), "id"], ]$blockId <- 34
+blocks[blocks$id == 34, "count"] <- blocks[blocks$id == 34, "count"] + 4
+
+treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(216, 141), "id"], ]$blockId <- 4945
+blocks[blocks$id == 4945, "count"] <- blocks[blocks$id == 4945, "count"] + 6
+
+treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(12, 191, 292), "id"], ]$blockId <- 4433
+blocks[blocks$id == 4433, "count"] <- blocks[blocks$id == 4433, "count"] + 6
+
+blocks <- rbind(blocks, cbind(id = nrow(blocks) + 1, primary.street = "E 20th St", cross1.segment = "NA", 
+                              cross1.street = "Stuyvesant Loop N", cross1.lat = "40.73306",
+                              cross1.lon = "-73.975391", cross2.segment = "NA", cross2.street = "Stuyvesant Loop N", 
+                              cross2.lat = "40.734041",  cross2.lon = "73.977722", count = 17))
+treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(267, 342, 362, 43, 150, 329), "id"], ]$blockId <- nrow(blocks)
+
+treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(269), "id"], ]$blockId <- 2898
+blocks[blocks$id == 2898, "count"] <- blocks[blocks$id == 2898, "count"] + 2
+
+blocks <- rbind(blocks, cbind(id = nrow(blocks) + 1, primary.street = "E 6th St", cross1.segment = "NA", 
+                              cross1.street = "Ave C", cross1.lat = "40.729756",
+                              cross1.lon = "-73.9747137", cross2.segment = "NA", cross2.street = "F D R Dr", 
+                              cross2.lat = "40.7288767",  cross2.lon = "-73.9725381", count = 5))
+treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(201, 231), "id"], ]$blockId <- nrow(blocks)
+
+treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(314), "id"], ]$blockId <- 2135
+blocks[blocks$id == 2135, "count"] <- blocks[blocks$id == 2135, "count"] + 2
+
+treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(51), "id"], ]$blockId <- 5119
+blocks[blocks$id == 5119, "count"] <- blocks[blocks$id == 5119, "count"] + 4
+
+blocks <- rbind(blocks, cbind(id = nrow(blocks) + 1, primary.street = "E 6th St", cross1.segment = "NA", 
+                              cross1.street = "Ave C", cross1.lat = "40.729756",
+                              cross1.lon = "-73.9747137", cross2.segment = "NA", cross2.street = "F D R Dr", 
+                              cross2.lat = "40.7288767",  cross2.lon = "-73.9725381", count = 5))
+treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(201, 231), "id"], ]$blockId <- nrow(blocks)
+
+blocks <- rbind(blocks, cbind(id = nrow(blocks) + 1, primary.street = "Lillian Wald Dr", cross1.segment = "NA", 
+                              cross1.street = "E Houston St", cross1.lat = "40.71964",
+                              cross1.lon = "-73.978034", cross2.segment = "NA", cross2.street = "E Houston St", 
+                              cross2.lat = "40.719214",  cross2.lon = "-73.97674", count = 6))
+treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(74, 251), "id"], ]$blockId <- nrow(blocks)
+
+treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(224), "id"], ]$blockId <- 6005
+blocks[blocks$id == 6005, "count"] <- blocks[blocks$id == 6005, "count"] + 1
+
+treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(4), "id"], ]$blockId <- 6042
+blocks[blocks$id == 6042, "count"] <- blocks[blocks$id == 6042, "count"] + 1
+
+blocks <- rbind(blocks, cbind(id = nrow(blocks) + 1, primary.street = "Grand St", cross1.segment = "NA", 
+                              cross1.street = "Clinton St", cross1.lat = "40.7159528",
+                              cross1.lon = "-73.9866991", cross2.segment = "NA", cross2.street = "Pitt St", 
+                              cross2.lat = "40.715217",  cross2.lon = "-73.9842724", count = 3))
+treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(127, 302, 13), "id"], ]$blockId <- nrow(blocks)
+
+treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(73), "id"], ]$blockId <- 1
+blocks[blocks$id == 1, "count"] <- blocks[blocks$id == 1, "count"] + 1
+
+treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(54), "id"], ]$blockId <- 660
+blocks[blocks$id == 660, "count"] <- blocks[blocks$id == 660, "count"] + 1
+
+blocks <- rbind(blocks, cbind(id = nrow(blocks) + 1, primary.street = "Essex St", cross1.segment = "NA", 
+                              cross1.street = "Canal St", cross1.lat = "40.7144184",
+                              cross1.lon = "-73.990254", cross2.segment = "NA", cross2.street = "Hester St", 
+                              cross2.lat = "40.7155581",  cross2.lon = "-73.9897929", count = 1))
+treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(65), "id"], ]$blockId <- nrow(blocks)
+
+blocks <- rbind(blocks, cbind(id = nrow(blocks) + 1, primary.street = "Madison St", cross1.segment = "NA", 
+                              cross1.street = "Gouverneur St", cross1.lat = "40.7131288",
+                              cross1.lon = "-73.9838807", cross2.segment = "NA", cross2.street = "Jackson St", 
+                              cross2.lat = "40.7134917",  cross2.lon = "-73.9809096", count = 6))
+treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(58, 310, 223), "id"], ]$blockId <- nrow(blocks)
+
+km <- kmeans(cbind(trees.err[trees.err$cluster == 286, "lat"], 
+                   trees.err[trees.err$cluster == 286, "lon"]), centers = 4, nstart = 50)
+trees.err[trees.err$cluster == 286, "cluster2"] <- as.factor(km$cluster)
+blocks <- rbind(blocks, cbind(id = nrow(blocks) + 1, primary.street = "South St", cross1.segment = "NA", 
+                              cross1.street = "Gouverneur Slip E", cross1.lat = "40.7108398",
+                              cross1.lon = "-73.9832726", cross2.segment = "NA", cross2.street = "Jackson St", 
+                              cross2.lat = "40.7110307",  cross2.lon = "-73.9805873", count = 1))
+treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(286) & trees.err$cluster2 == 3, "id"], ]$blockId <- nrow(blocks)
+
+treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(286) & trees.err$cluster2 == 2, "id"], ]$blockId <- 403
+blocks[blocks$id == 403, "count"] <- blocks[blocks$id == 403, "count"] + 1
+
+treeMap[treeMap$id == 233106, ]$blockId <- 5772 #cluster 286 cluster2 1
+blocks[blocks$id == 5772, "count"] <- blocks[blocks$id == 5772, "count"] + 1
+
+treeMap[treeMap$id == 213556, ]$blockId <- 403 #cluster 286 cluster2 1
+blocks[blocks$id == 403, "count"] <- blocks[blocks$id == 403, "count"] + 1
+
+treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(147), "id"], ]$blockId <- 853
+blocks[blocks$id == 853, "count"] <- blocks[blocks$id == 853, "count"] + 1
+
+km <- kmeans(cbind(trees.err[trees.err$cluster == 53, "lat"], 
+                   trees.err[trees.err$cluster == 53, "lon"]), centers = 2, nstart = 50)
+trees.err[trees.err$cluster == 53, "cluster2"] <- as.factor(km$cluster)
+blocks <- rbind(blocks, cbind(id = nrow(blocks) + 1, primary.street = "Frank T Modica Way", cross1.segment = "NA", 
+                              cross1.street = "Cherry St", cross1.lat = "40.7111362",
+                              cross1.lon = "-73.989963", cross2.segment = "NA", cross2.street = "South St", 
+                              cross2.lat = "40.7100897",  cross2.lon = "-73.9898314", count = 3))
+treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(53) & trees.err$cluster2 == 2, "id"], ]$blockId <- nrow(blocks)
+
+treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(53) & trees.err$cluster2 == 1, "id"], ]$blockId <- 7467
+blocks[blocks$id == 7467, "count"] <- blocks[blocks$id == 7467, "count"] + 3
+
+blocks <- rbind(blocks, cbind(id = nrow(blocks) + 1, primary.street = "Forsyth St", cross1.segment = "NA", 
+                              cross1.street = "Canal St", cross1.lat = "40.7155899",
+                              cross1.lon = "-73.9942883", cross2.segment = "NA", cross2.street = "Division St", 
+                              cross2.lat = "40.7142802",  cross2.lon = "-73.9941873", count = 1))
+treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(263), "id"], ]$blockId <- nrow(blocks)
+
+blocks <- rbind(blocks, cbind(id = nrow(blocks) + 1, primary.street = "Pike St", cross1.segment = "NA", 
+                              cross1.street = "Cherry St", cross1.lat = "40.7108688",
+                              cross1.lon = "-73.9920145", cross2.segment = "NA", cross2.street = "Madison St", 
+                              cross2.lat = "40.7124831",  cross2.lon = "-73.9922789", count = 1))
+treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(280), "id"], ]$blockId <- nrow(blocks)
+
+treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(290), "id"], ]$blockId <- 2452
+blocks[blocks$id == 2452, "count"] <- blocks[blocks$id == 2452, "count"] + 2
+
+blocks <- rbind(blocks, cbind(id = nrow(blocks) + 1, primary.street = "Catherine Slip", cross1.segment = "NA", 
+                              cross1.street = "Catherine St", cross1.lat = "40.7113655",
+                              cross1.lon = "-73.9967797", cross2.segment = "NA", cross2.street = "Catherine St", 
+                              cross2.lat = "40.709739",  cross2.lon = "-73.9963935", count = 6))
+treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(155, 217), "id"], ]$blockId <- nrow(blocks)
+
+treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(285), "id"], ]$blockId <- 2842
+blocks[blocks$id == 2842, "count"] <- blocks[blocks$id == 2842, "count"] + 1
+
+blocks <- rbind(blocks, cbind(id = nrow(blocks) + 1, primary.street = "Rober F Wagner Sr Pl", cross1.segment = "NA", 
+                              cross1.street = "Pearl St", cross1.lat = "40.710167",
+                              cross1.lon = "-74.0011383", cross2.segment = "NA", cross2.street = "South St", 
+                              cross2.lat = "40.7085816",  cross2.lon = "-73.9990062", count = 1))
+treeMap[treeMap$id == 264721, ]$blockId <- nrow(blocks) #214
+
+blocks <- rbind(blocks, cbind(id = nrow(blocks) + 1, primary.street = "Rober F Wagner Sr Pl", cross1.segment = "NA", 
+                              cross1.street = "Madison St", cross1.lat = "40.71177",
+                              cross1.lon = "-73.9997091", cross2.segment = "NA", cross2.street = "Rober F Wagner Sr Pl", 
+                              cross2.lat = "40.710167",  cross2.lon = "-74.0011383", count = 1))
+treeMap[treeMap$id == 209479, ]$blockId <- nrow(blocks) #214
+
+blocks <- rbind(blocks, cbind(id = nrow(blocks) + 1, primary.street = "Frankfort St", cross1.segment = "NA", 
+                              cross1.street = "Gold St", cross1.lat = "40.710961",
+                              cross1.lon = "-74.0036383", cross2.segment = "NA", cross2.street = "Spurce St", 
+                              cross2.lat = "40.7119124",  cross2.lon = "-74.0060486", count = 6))
+treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(33, 320, 180, 365), "id"], ]$blockId <- nrow(blocks)
+
+treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(144), "id"], ]$blockId <- 8167
+blocks[blocks$id == 8167, "count"] <- blocks[blocks$id == 8167, "count"] + 1
+
+treeMap[treeMap$id %in% trees.err[trees.err$cluster %in% c(86), "id"], ]$blockId <- 194
+blocks[blocks$id == 194, "count"] <- blocks[blocks$id == 194, "count"] + 2
 
 # 255, 219, 116, 254, 324, 64, 241, 45, 61, 107, 215, 24, 175, 355, 173, 59, 209, 358, 257, 9, 360, 
 # 16, 186, 170, 252, 68, 112, 120, 240, 162, 39, 128, 143, 356, 76, 178, 279, 29, 3, 293, 229, 184,
@@ -588,6 +1028,14 @@ then do jumble below 222. also move zoom + figs into the revised rmd and out of 
 # 90, 159, 243, 212, 345, 37, 311, 287, 125, 92, 197, 40, 88, 168, 332, 202, 148, 96, 93, 160, 113,
 # 309, 32, 234, 341, 327, 343, 126, 118, 185, 106, 135, 288, 36, 87, 307, 5, 167, 321, 161, 153, 63,
 # 108, 21, 78, 348, 259, 60, 2, 242, 306, 238, 95, 1, 152, 221, 244, 228, 256, 206, 207, 213, 187, 
-# 194, 253, 328, 326, 138, 174, 200, 49, 233, 361, 181, 344, 101, 274, 331, 164, 129, 364, 98, 71
+# 194, 253, 328, 326, 138, 174, 200, 49, 233, 361, 181, 344, 101, 274, 331, 164, 129, 364, 98, 71,
 # 139, 272, 247, 157, 55, 100, 156, 277, 70, 335, 291, 94, 91, 368, 245, 350, 258, 249, 273, 235, 347,
-# 318, 182, 23, 82, 289, 222, 67, 313
+# 318, 182, 23, 82, 289, 222, 67, 313, 57, 283, 305, 56, 281, 77, 201, 169, 146, 154, 363, 262, 117,
+# 271, 299, 142, 145, 20, 171, 111, 85, 80, 83, 99, 312, 34, 354, 41, 122, 18, 114, 130, 7, 316, 132, 
+# 275, 308, 38, 46, 315, 349, 260, 196, 102, 353, 89, 25, 22, 232, 284, 282, 230, 84, 204, 44, 8, 
+# 301, 370, 179, 52, 319, 208, 188, 31, 369, 266, 239, 97, 268, 278, 166, 36, 199, 81, 30, 264, 367,
+# 50, 236, 105, 48, 69, 14, 35, 323, 110, 359, 193, 66, 72, 366, 276, 136, 114, 119, 158, 298, 10,
+# 205, 351, 250, 115, 183, 131, 352, 210, 218, 261, 337, 19, 333, 140, 103, 109, 137, 294, 75, 
+# 296, 42, 322, 27, 15, 346, 357, 246, 28, 133, 334, 94, 47, 189, 248, 300, 216, 141, 12, 191, 292, 
+# 267, 342, 362, 43, 150, 329, 269, 201, 231, 314, 51, 74, 251, 224, 4, 127, 302, 13, 73, 54, 65, 
+# 58, 310, 223, 286, 147, 53, 263, 280, 290, 155, 217, 285, 214, 33, 320, 180, 365, 144, 86
