@@ -18,6 +18,7 @@ library(rjson)
 library(dplyr)
 library(tidyr)
 library(sp)
+library(data.table)
 ```
 
 
@@ -94,7 +95,7 @@ g
 
 ![](Figs/seq_along-1.png)
 
-The area of interest is the main island of Manhattan. It looks that's the polygon described by the bright red through purple points, starting and ending at Inwood. Using the legend, that appears to be about points 1100 and up (fine-tuned to this number with trial and error). The weird island floating up by the bronx should be removed as well (points > 6130) . 
+The area of interest is the main island of Manhattan. It looks like that's the polygon described by the bright red through purple points, starting and ending at Inwood. Using the legend, that appears to be about points 1100 and up (fine-tuned to this number with trial and error). The weird island floating up by the bronx should be removed as well (points > 6130). 
 
 
 ```r
@@ -307,7 +308,24 @@ ggmap(map.wall) +
 Doubling the number of clusters does the job, at least for the financial district. And clusters can always be easily combined. 
 
 
-Group blocks by primary, secondary streets, keeping only 1 set of coordinates. 
+
+After manually adding missing blocks and assigning all clusters of trees, the blocks require a little further cleanup. All entries with the same primary and cross streets are collapsed into a single entry. The trees assigned to the collapsed blocks will be assigned the new block ID value. 
+
+
+```r
+blocks$idx <- blocks %>% group_indices(primary.street, cross1.street, cross2.street)
+blocks <- as.data.table(blocks) 
+blocks.collapse <- blocks[blocks[, .I[order(idx)[1]], by = idx]$V1, 
+                          c("idx", "primary.street", "cross1.street", "cross2.street", "cross1.lat",
+                            "cross1.lon", "cross2.lat", "cross2.lon"), with = FALSE]
+treeMap$blockId <- as.character(treeMap$blockId)
+treeMap$blockId <- right_join(blocks, treeMap, by = c("id" = "blockId")) %>%  select(idx)
+```
+
+This reduces the number of blocks from 8189 to 6414. 
+
+
+Deep check at streets bw East End ave and york
 
 [^1]: **New York City Street Tree Map Beta**  
   Interactive map to view details from a city-wide to a single tree level. No official API  
