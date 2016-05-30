@@ -148,7 +148,7 @@ blocks <- data.frame(id = 1, primary.street = "Clinton St", cross1.segment = 1,
 err <- NULL
 tmpBlock <- NULL
 treeMap$blockId <- NULL
-for (tree in 385:nrow(todo)) { 
+for (tree in 1:nrow(treeMap)) { 
   tryCatch({
     print(tree)
   segments <- getSegments(todo[tree, "lat"], todo[tree, "lon"])
@@ -221,10 +221,9 @@ for (tree in 385:nrow(todo)) {
     todo[tree, "blockId"] <- nrow(blocks)
   }},
   error = function(e){
-    print(paste("err on tree", tree, timestamp(quiet = T)))
-    #Sys.sleep(60*30)
+    # sleep for API limit
+    Sys.sleep(60 * 60)
     tree <- tree - 1
-    print(paste("continuing at", timestamp(quiet = T)))
   }
 )
 }
@@ -294,19 +293,111 @@ trees.err <- readRDS("rds/trees.err.rds")
 After manually adding missing blocks and assigning all clusters of trees, the blocks require a little further cleanup. All entries with the same primary and cross streets are collapsed into a single entry. The trees assigned to the collapsed blocks will be assigned the new block ID value. 
 
 ```{r collapse blocks}
-blocks$idx <- blocks %>% group_indices(primary.street, cross1.street, cross2.street)
+blocks$idx <- blocks %>% group_indices(primary.street, cross1.street, cross2.street) 
 blocks <- as.data.table(blocks) 
 blocks.collapse <- blocks[blocks[, .I[order(idx)[1]], by = idx]$V1, 
                           c("idx", "primary.street", "cross1.street", "cross2.street", "cross1.lat",
                             "cross1.lon", "cross2.lat", "cross2.lon"), with = FALSE]
+blocks.collapse$count <- tapply(blocks$count, blocks$idx, sum)
 treeMap$blockId <- as.character(treeMap$blockId)
 treeMap$blockId <- right_join(blocks, treeMap, by = c("id" = "blockId")) %>%  select(idx)
 ```
 
-This reduces the number of blocks from `r nrow(blocks)` to `r nrow(blocks.collapse)`. 
+This reduces the number of blocks from `r nrow(blocks)` to `r nrow(blocks.collapse)`. They can now be sorted by tree count.
 
+```{r}
+head(blocks.collapse[order(blocks.collapse$count, decreasing = TRUE), c(2:4, 9), with = FALSE], 10)
+```
 
+handle NA block IDXs. Looks like 92 treeMap$blockIds are null. possibyl from the looping/cycling process. 
+leftover <- treeMap[is.na(treeMap$blockId),]. rerun loop for tree in leftover. 
 Deep check at streets bw East End ave and york
+
+The Manhattan block with the highest number of trees is Central Park W between W 77th and W 81st, with `r head(blocks.collapse[order(blocks.collapse$count, decreasing = TRUE),]$count, 1)`. While interesting in it's own right, this doesn't take into account the distance of a block. For instance, the "block" along Central Park W is clearly 4 blocks long. To reconcile this issue, a slightly different question is asked: Which block has the highest trees-per-meter (TPM)? The TPM approach as discussed in the [first article]() is applied.  
+
+```{r}
+deg2rad <- function(deg) return(deg * pi / 180)
+
+gcd <- function(long1, lat1, long2, lat2) {
+  # Computes the great-circle distance between two points using the haversine formula
+  #
+  # Args:
+  #   long1:  Longitude of first point in decimal degrees
+  #   lat2:   Latitude of first point in decimal degrees
+  #   long2:  Longitude of first point in decimal degrees
+  #   lat2:   Latitude of second point in decimal degrees
+  #
+  # Returns:
+  #   The distance in meters
+  
+  long1 <- deg2rad(long1) 
+  lat1 <- deg2rad(lat1)
+  long2 <- deg2rad(long2) 
+  lat2 <- deg2rad(lat2)
+  r <- 6371000
+  long.delt <- (long2 - long1)
+  lat.delt <- (lat2 - lat1)
+  a <- as.numeric(sin(lat.delt / 2)^2 + cos(lat1) * cos(lat2) * sin(long.delt / 2)^2)
+  c <- 2 * atan2(sqrt(a), sqrt(1 - a))
+  r * c
+}
+```
+
+Note the application of the Haversine formula assumes all blocks are straight lines from one endpoint to the other. This is generally the case. Another possible solution could incorporate Google Maps, which may give a more precise distance, but with an API rate limit. 
+
+
+```{r}
+blocks.collapse$cross2.lon <- as.numeric(blocks.collapse$cross2.lon)
+blocks.collapse$cross2.lat <- as.numeric(blocks.collapse$cross2.lat)
+blocks.collapse$cross1.lon <- as.numeric(blocks.collapse$cross1.lon)
+blocks.collapse$cross1.lat <- as.numeric(blocks.collapse$cross1.lat)
+
+for (i in 2:nrow(blocks.collapse)) { 
+  d <- gcd(blocks.collapse[i, "cross1.lon", with = FALSE], 
+           blocks.collapse[i, "cross1.lat", with = FALSE], 
+           blocks.collapse[i, "cross2.lon", with = FALSE], 
+           blocks.collapse[i, "cross2.lat", with = FALSE])
+  blocks.collapse[i, "distance"] <- d 
+}
+
+blocks.collapse$tpm <- blocks.collapse$count / blocks.collapse$distance
+blocks.real <- blocks.collapse[blocks.collapse$tpm != Inf, ]
+```
+
+todo row for blocks.collapse[1,]
+fix blocks with lat/lon1 == lat/lon2 (distance inf)
+
+
+At this point the question of which Manhattan block has the highest TPM can be answered. 
+
+```{r, echo = FALSE}
+head(blocks.real[order(blocks.real$tpm, decreasing = TRUE), c(2:4, 9:11), with = FALSE], 1)
+```
+
+The top 25 blocks: 
+
+```{r}
+top25 <- as.data.frame(head(blocks.real[order(blocks.real$tpm, decreasing = TRUE), ], 25))
+top25[, c(2:4, 9:11)]
+```
+
+```{r top 25 map}
+plotdata <- as.data.frame(
+              rbind(as.matrix(top25[, c("idx", "cross1.lat", "cross1.lon"), with = FALSE]),
+                    as.matrix(top25[, c("idx", "cross2.lat", "cross2.lon"), with = FALSE])))
+plotdata$idx <- as.factor(plotdata$idx)
+
+
+
+ggmap(map.manh) + 
+    geom_line(data = plotdata, aes(x = cross1.lon, y = cross1.lat, color = idx), size = 6) +
+  # geom_point(dat = top25, aes(x = lon.avg, y = lat.avg), size = 6, alpha = 0.7, color = "green") +
+   theme_nothing() 
+```
+
+instead of above and using lines, plot a point at the average between lat1/lon1 and lat2/lon2
+todo calculate distance using the segments in teh main loop. 
+consider hex plotting of areas by average tpm. 
 
 [^1]: **New York City Street Tree Map Beta**  
   Interactive map to view details from a city-wide to a single tree level. No official API  
