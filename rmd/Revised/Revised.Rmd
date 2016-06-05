@@ -28,6 +28,7 @@ library(dplyr)
 library(tidyr)
 library(sp)
 library(data.table)
+library(hexbin)
 ```
 
 ```{r, eval = FALSE}
@@ -151,9 +152,10 @@ blocks <- data.frame(id = 1, primary.street = "Clinton St", cross1.segment = 1,
 err <- NULL
 tmpBlock <- NULL
 treeMap$blockId <- NULL
-for (tree in 1:nrow(treeMap)) { 
+for (tree in 1:nrow(leftover)) { 
   tryCatch({
-  segments <- getSegments(treeMap[tree, "lat"], treeMap[tree, "lon"])
+    print(tree)
+  segments <- getSegments(leftover[tree, "lat"], leftover[tree, "lon"])
   primary <- segments[1, "street"]
   tmpBlock <- data.frame()
   for (segment in 1 : nrow(segments)) {
@@ -216,13 +218,14 @@ for (tree in 1:nrow(treeMap)) {
   if (nrow(x) > 0) {
     # block exists
     blocks[blocks$id == x$id, "count"] <- blocks[blocks$id == x$id, "count"] + 1
-    treeMap[tree, "blockId"] <- blocks[blocks$id == x$id, "id"]
+    leftover[tree, "blockId"] <- blocks[blocks$id == x$id, "id"]
   } else{
     blocks <- rbind(blocks, 
                     cbind(id = nrow(blocks) + 1, primary.street = primary, tmpBlock, count = 1))
-    treeMap[tree, "blockId"] <- nrow(blocks)
+    leftover[tree, "blockId"] <- nrow(blocks)
   }},
   error = function(e){
+    print("err")
     Sys.sleep(60 * 60)  # sleep for API limit
     tree <- tree - 1
   })
@@ -403,11 +406,17 @@ Surprisingly, most of the top 25 blocks are in lower Manhattan. Perhaps unsurpri
 
 ```{r hex}
 ggmap(map.manh) +
-  geom_hex(data = blocks.real, aes(x = lon.avg, y = lat.avg, fill = tpm)) +
+  coord_cartesian() +
+  geom_hex(data = blocks.real, aes(x = lon.avg, y = lat.avg,  tpm), bins = 30) +
+  theme_nothing()
++
+ggmap(map.manh) +
+  coord_cartesian() +
+  geom_hex(data = treeMap, aes(x = lon, y = lat,  1), bins = 30) +
   theme_nothing()
 ```
 
-
+###maybe use the layered map to compare both at once?
 
 [^1]: **New York City Street Tree Map Beta**  
   Interactive map to view details from a city-wide to a single tree level. No official API  
