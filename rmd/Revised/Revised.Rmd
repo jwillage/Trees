@@ -295,12 +295,6 @@ treeMap <- readRDS("rds/treeMap.corrected.rds")
 trees.err <- readRDS("rds/trees.err.rds") 
 ```
 
-```{r housekeeping, include = F}
-treeMap <- treeMap[complete.cases(treeMap), ]
-treeMap$blockId <- as.character(treeMap$blockId)
-```
-
-#todo check corrections link
 After [assigning](https://github.com/jwillage/Trees/blob/master/corrections_revised.R) all tree clusters to a block (including manually adding missing blocks), the blocks still require a little further cleanup. All "duplicate" entries (blocks with the same primary street and cross streets) are collapsed into a single entry with a new id. The trees assigned to the collapsed blocks will be assigned the new block ID value. 
 
 ```{r collapse blocks}
@@ -313,10 +307,6 @@ blocks <- blocks[blocks[, .I[order(agg)[1]], by = agg]$V1,
                             "cross1.lon", "cross2.lat", "cross2.lon"), with = FALSE]
 summary <- treeMap %>% group_by(agg) %>% summarize(trees = n()) %>% as.data.frame()
 blocks <- inner_join(summary, blocks, by = c("agg"))
-
-na <- blocks[is.na(blocks$cross2.lat), ]
-#saveRDS(blocks, "rds/blocks.collapsed.rds")
-# treeMap <- treeMap[complete.cases(treeMap), ]
 ```
 
 This reduces the number of blocks from `r block.count` to `r nrow(blocks)`. Now they can be sorted by tree count.
@@ -325,9 +315,7 @@ This reduces the number of blocks from `r block.count` to `r nrow(blocks)`. Now 
 head(blocks[order(blocks$trees, decreasing = TRUE), c(1:5)], 10)
 ```
 
-Deep check at streets bw East End ave and york
-
-The Manhattan block with the highest number of trees is Central Park W between W 77th and W 81st, with `r head(blocks[order(blocks$trees, decreasing = TRUE),]$trees, 1)`. While interesting in it's own right, this doesn't take into account the distance of a block. For instance, this "block" along Central Park W is clearly 4 blocks long. To reconcile this issue, a slightly different question is asked: Which block has the highest trees-per-meter (TPM)? The TPM approach, as discussed in the [first article](), is applied.  
+The Manhattan block with the highest number of trees is Riverside Dr between 116th St and 119th St, with `r head(blocks[order(blocks$trees, decreasing = TRUE),]$trees, 1)`. While interesting in it's own right, this doesn't take into account the distance of a block. For instance, this "block" along Riverside Dr is clearly 3 blocks long. To reconcile this issue, a slightly different question is asked: Which block has the highest trees-per-meter (TPM)? The TPM approach, as discussed in the [first article](), is applied.  
 
 ```{r}
 deg2rad <- function(deg) return(deg * pi / 180)
@@ -359,14 +347,13 @@ gcd <- function(long1, lat1, long2, lat2) {
 
 Note the application of the Haversine formula assumes all blocks are straight lines from one endpoint to the other. This is generally the case. Other possible solutions could incorporate Google Maps or the segment distances returned from Geonames API. 
 
-
 ```{r}
 blocks$cross2.lon <- as.numeric(blocks$cross2.lon)
 blocks$cross2.lat <- as.numeric(blocks$cross2.lat)
 blocks$cross1.lon <- as.numeric(blocks$cross1.lon)
 blocks$cross1.lat <- as.numeric(blocks$cross1.lat)
 
-for (i in 2:nrow(blocks)) { 
+for (i in 1:nrow(blocks)) { 
   d <- gcd(blocks[i, "cross1.lon"], 
            blocks[i, "cross1.lat"], 
            blocks[i, "cross2.lon"], 
@@ -375,13 +362,18 @@ for (i in 2:nrow(blocks)) {
 }
 
 blocks$tpm <- blocks$trees / blocks$distance
-blocks.real <- blocks[blocks$tpm != Inf, ]
+```
+
+The process of mapping points to blocks introduced some problematic data; when a second cross street couldn't be determined, the algorithm marked all the related columns as `NA`. In order to have a complete result set, those rows are now imputed with the median TPM. These incomplete blocks can be identified down the line since their second cross street remains null. 
+
+```{r}
+blocks[!complete.cases(blocks), "tpm"] <- median(blocks[complete.cases(blocks), "tpm"])
 ```
 
 At this point the question of which Manhattan block has the highest TPM can be answered. 
 
 ```{r, echo = FALSE}
-head(blocks.real[order(blocks.real$tpm, decreasing = TRUE), c(1:5)], 1)
+head(blocks[order(blocks$trees, decreasing = TRUE), c(1:5, 11)], 10)
 ```
 
 The top 25 blocks: 
