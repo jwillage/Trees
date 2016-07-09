@@ -348,11 +348,15 @@ gcd <- function(long1, lat1, long2, lat2) {
 Note the application of the Haversine formula assumes all blocks are straight lines from one endpoint to the other. This is generally the case. Other possible solutions could incorporate Google Maps or the segment distances returned from Geonames API. 
 
 ```{r}
+#remove?
 blocks$cross2.lon <- as.numeric(blocks$cross2.lon)
 blocks$cross2.lat <- as.numeric(blocks$cross2.lat)
 blocks$cross1.lon <- as.numeric(blocks$cross1.lon)
 blocks$cross1.lat <- as.numeric(blocks$cross1.lat)
 
+```
+
+```{r}
 for (i in 1:nrow(blocks)) { 
   d <- gcd(blocks[i, "cross1.lon"], 
            blocks[i, "cross1.lat"], 
@@ -370,39 +374,44 @@ The process of mapping points to blocks introduced some problematic data; when a
 blocks[!complete.cases(blocks), "tpm"] <- median(blocks[complete.cases(blocks), "tpm"])
 ```
 
-At this point the question of which Manhattan block has the highest TPM can be answered. 
+At this point, the question can be answered: which Manhattan block has the highest TPM?
 
 ```{r, echo = FALSE}
-head(blocks[order(blocks$trees, decreasing = TRUE), c(1:5, 11)], 10)
+head(blocks[order(blocks$tpm, decreasing = TRUE),], 10)
 ```
+
+The highest tpm is the stretch on Broadway between W 73rd and W 74th St. What seems like an unlikely block to have the highest concentration of trees in Manhattan, actually hosts a mini-nursery through the median. In fact, most of Broadway running through the Upper West Side up to 168th St has these [Broadway Malls](). 
+
+<iframe src="https://www.google.com/maps/embed?pb=!1m0!3m2!1sen!2sus!4v1468101936630!6m8!1m7!1siPmm4WOzI14dbtK0cVWWhQ!2m2!1d40.77973292615857!2d-73.98180250994949!3f41.771814255830755!4f-3.8725104489190727!5f0.7820865974627469" width="800" height="600"
+frameborder="0" style="border:0" allowfullscreen></iframe>
+
+<iframe src="https://www.google.com/maps/embed?pb=!1m0!3m2!1sen!2sus!4v1468104363746!6m8!1m7!1s-TUZoBt_3ZhIfBwWrO2nqg!2m2!1d40.78015513512755!2d-73.98145567196616!3f221.68876822150597!4f-8.008538271073448!5f0.7820865974627469" width="800" height="600" frameborder="0" style="border:0" allowfullscreen></iframe>
 
 The top 25 blocks: 
 
-```{r}
-blocks.real <- as.data.frame(blocks.real)
-blocks.real$lat.avg <- NULL
-blocks.real$lon.avg <- NULL
-for (i in 1:nrow(blocks.real)) {
-  blocks.real[i, "lat.avg"] <- mean(blocks.real[i, "cross1.lat"], blocks.real[i, "cross2.lat"])
-  blocks.real[i, "lon.avg"] <- mean(blocks.real[i, "cross1.lon"], blocks.real[i, "cross2.lon"])
+```{r top25}
+blocks$lat.avg <- NULL
+blocks$lon.avg <- NULL
+for (i in 1:nrow(blocks)) {
+  if (!is.na(blocks[i, "cross2.lat"])) {
+    blocks[i, "lat.avg"] <- mean(blocks[i, "cross1.lat"], blocks[i, "cross2.lat"])
+    blocks[i, "lon.avg"] <- mean(blocks[i, "cross1.lon"], blocks[i, "cross2.lon"])
+  }
 }
 
-top25 <- as.data.frame(head(blocks.real[order(blocks.real$tpm, decreasing = TRUE), ], 25))
-top25[, c(2:4, 9:11)]
-```
+top25 <- as.data.frame(head(blocks[order(blocks$tpm, decreasing = TRUE), ], 25))
 
-```{r top 25 map}
 ggmap(map.manh) + 
    geom_point(data = top25, aes(x = lon.avg, y = lat.avg), size = 6, alpha = 0.5, color = "green") +
    theme_nothing() 
 ```
 
-Surprisingly, most of the top 25 blocks are in lower Manhattan. Perhaps unsurprisingly, there isn't much in midtown. Here is the tree density over all of Manhattan, by trees per meter. 
+ Here is the tree density over all of Manhattan, by trees per meter. 
 
 ```{r hex, eval = F}
 ggmap(map.manh) + #1
   coord_cartesian() +
-  geom_hex(data = blocks.real, aes(x = lon.avg, y = lat.avg,  tpm), bins = 30) +
+  geom_hex(data = blocks, aes(x = lon.avg, y = lat.avg,  tpm), bins = 30) +
   theme_nothing()
 +
 ggmap(map.manh) + #2
@@ -412,13 +421,13 @@ ggmap(map.manh) + #2
 
 ggmap(map.manh) + #3 same as 1
   coord_cartesian() +
-#  geom_hex(data = blocks.real, aes(x = lon.avg, y = lat.avg,  fill =sum(count)), bins = 30) +
-  stat_binhex(data = blocks.real, aes(x = lon.avg, y = lat.avg, color = idx)) +
+#  geom_hex(data = blocks, aes(x = lon.avg, y = lat.avg,  fill =sum(count)), bins = 30) +
+  stat_binhex(data = blocks, aes(x = lon.avg, y = lat.avg, color = idx)) +
   theme_nothing()
 
 ggmap(map.manh) +
   coord_cartesian() +
-  stat_summary_hex(data = blocks.real, aes(x = lon.avg, y = lat.avg, z = tpm), fun = mean) +
+  stat_summary_hex(data = blocks, aes(x = lon.avg, y = lat.avg, z = tpm), fun = mean) +
   theme_nothing() +
   scale_fill_gradient(low="lightgreen", high="darkgreen")
 
@@ -442,3 +451,4 @@ ggmap(map.manh) +
 [^2]: **NYC Open Data**  
   Political and Administrative Boundaries, Borough Boundaries (Clipped to Shoreline)
   http://www1.nyc.gov/site/planning/data-maps/open-data/districts-download-metadata.page&nbsp;&nbsp;&nbsp;
+  
