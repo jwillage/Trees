@@ -12,13 +12,14 @@ library(knitr)
 ```
 
 ```{r global_options, include = FALSE}
+options(width = 100)
 knitr::opts_chunk$set(fig.width = 7, fig.height = 7, fig.path='Figs/', 
                       warning = FALSE, message = FALSE, cache = TRUE)
 ```
 
-This is the third and final installment in a series discussing trees and geocoordinate accuracy in New York City. The [first article]() established a baseline and connected to the NYC Tree Map data source[^1]. The [second article]() focused on achieving a higher accuracy in mapping points to street blocks. This article brings the other two together, applying generic coordinate mapping to the full list of Manhattan street trees.  
+This is the third and final installment in a series discussing trees and geocoordinate accuracy in New York City. The [first article](http://www.joewillage.com/blog/2016/3/31/analyzing-new-yorks-trees) established a baseline and connected to the NYC Tree Map data source. The [second article](http://www.joewillage.com/blog/2016/4/10/achieving-accuracy-in-mapping-coordinates-to-street-blocks) focused on achieving a higher accuracy in mapping points to street blocks. This article brings the other two together, applying generic coordinate mapping to the full list of Manhattan street trees, in order to determine which block in the city has the most trees.    
 
-The first step is calling the Tree Map API. The API returns a rectangular polygon filled with points representing trees. Unfortunately, the island of Manhattan doesn't fit easily onto a rectangle. So an MBB convering Manhattan is defined, and all trees outside of that area are pruned.  
+The first step is calling the Tree Map API[^1]. This data set contains all the *street trees* in New York. The API returns a rectangular polygon filled with points representing trees. Unfortunately, the island of Manhattan doesn't fit easily onto a rectangle. So an MBB covering Manhattan is defined, and all trees outside of that area are pruned.  
 
 ```{r, warning = FALSE, message = FALSE}
 library(ggmap)
@@ -62,7 +63,7 @@ treeMap <- readRDS("rds/treeMap.rds")
 head(treeMap)
 ```
 
-Next, the trees are subset to just those in Manhattan. The first step here is to retrieve a shape file describing Manhattan[^2].     
+Next, the dataframe is subset to just trees in Manhattan. The first step here is to retrieve a shape file describing Manhattan[^2].     
 
 ```{r draw Manhattan}
 shapes <- fromJSON(file = paste0("http://services5.arcgis.com/GfwWNkhOj9bNBqoJ/arcgis/rest/",
@@ -91,7 +92,7 @@ g <- ggplot(data = df.manh, aes(x = lon, y = lat, num = num)) +
 g
 ```
 
-The area of interest is the main island of Manhattan. It looks like that's the polygon described by the bright red through purple points, starting and ending at Inwood. Using the legend, that appears to be about points 1100 and up (fine-tuned to this number with trial and error). The weird island floating up by the Bronx should be removed as well (points > 6130). 
+The area of interest is the main island of Manhattan. It looks like that's the polygon described by the bright red through purple points, starting and ending at Inwood. Using the legend, that appears to be about points 1100 and up (fine-tuned to this number with trial and error). All the points below 1100 are removed. The weird island floating up by the Bronx should be removed as well (points > 6130). 
 
 ```{r manhattan subset}
 df.manh.subset <- subset(df.manh, num > 1100 & num < 6130)
@@ -110,7 +111,7 @@ points.manh <- point.in.polygon(treeMap$lon, treeMap$lat,
 treeMap <- treeMap[points.manh > 0, ]
 ```
 
-Now that the correct points are collected, they need to be mapped to a street block. That requires simultaneously building a block table. See the [last post]() for detailed explanations of the following functions.  
+Now that the correct points are collected, they need to be mapped to a street block. That requires simultaneously building a table of street blocks. The general concept is to loop through each Manhattan tree, using the following process. First, find out what street `segment` the tree's coordinates are on. Segments are two points that define a straight line, and blocks can be made up of multiple segments. So the next step is finding all the segments that make up the block. This is done by checking the distance between each segment end and it's nearest intersection[^3]. If the distance is almost 0, the segment end is marked as the end of the block. Repeat until the other block end is found, or all segments are exhausted (and enter an error state). Next, a check is performed to see if the street block already exists in the blocks table, or if it needs to be added. Finally, the tree is assigned the resulting block number. Repeat for all trees. See the [last post](http://www.joewillage.com/blog/2016/4/10/achieving-accuracy-in-mapping-coordinates-to-street-blocks) for more detailed explanations of the process.  
 
 ```{r block table, eval = FALSE}
 user <- readLines("../../geonames.txt")
@@ -142,90 +143,88 @@ getStreet <- function(primary, intersection) {
   street
 }
 
-#todo fix seed coords 
 # seed blocks table with correct data types
 blocks <- data.frame(id = 1, primary.street = "Clinton St", cross1.segment = 1, 
-                     cross1.street = "E Broadway", cross1.lat = "40.715952", 
-                     cross1.lon = "-73.986721", cross2.segment = 1, cross2.street = "Grand St",
+                     cross1.street = "E Broadway", cross1.lat = "40.7143361", 
+                     cross1.lon = "-73.9872163", cross2.segment = 1, cross2.street = "Grand St",
                      cross2.lat = "40.715952", cross2.lon = "-73.986721", count = 0, 
                      stringsAsFactors = FALSE)
 err <- NULL
 tmpBlock <- NULL
 treeMap$blockId <- NULL
-for (tree in 1:nrow(leftover)) { 
+for (tree in 1:nrow(treeMap)) { 
   tryCatch({
-    print(tree)
-  segments <- getSegments(leftover[tree, "lat"], leftover[tree, "lon"])
-  primary <- segments[1, "street"]
-  tmpBlock <- data.frame()
-  for (segment in 1 : nrow(segments)) {
-    if (segments[segment, "street"] != primary) {
+    segments <- getSegments(treeMap[tree, "lat"], treeMap[tree, "lon"])
+    primary <- segments[1, "street"]
+    tmpBlock <- data.frame()
+    for (segment in 1 : nrow(segments)) {
+      if (segments[segment, "street"] != primary) {
+        next
+      }
+      fni.parms1 <- paste0("lat=", segments[segment, "lat1"], 
+                           "&lng=", segments[segment, "lon1"])
+      int1 <- fromJSON(file = paste0(fni.url, fni.parms1))
+      fni.parms2 <- paste0("lat=", segments[segment, "lat2"], 
+                           "&lng=", segments[segment, "lon2"])
+      int2 <- fromJSON(file = paste0(fni.url, fni.parms2))
+  
+      if (segment == 1) {
+        primary.int1 <- int1
+        primary.int2 <- int2
+      }
+  
+      if (int1$intersection$distance < 0.001) {
+        tmpBlock <- rbind(tmpBlock, 
+                          data.frame(segment, street = getStreet(primary, int1$intersection),
+                                     lat = int1$intersection$lat, lon = int1$intersection$lng, 
+                                     stringsAsFactors = FALSE))
+      } 
+      if (int2$intersection$distance < 0.001) {
+        tmpBlock <- rbind(tmpBlock, 
+                          data.frame(segment, street = getStreet(primary, int2$intersection),
+                                     lat = int2$intersection$lat, lon = int2$intersection$lng, 
+                                     stringsAsFactors = FALSE))
+      } 
+      if (nrow(tmpBlock) > 2) {
+        # error state with incomplete segments. Use primary segment for full block
+         tmpBlock <- rbind(data.frame(1, street = getStreet(primary, primary.int1$intersection),
+                                      lat = int1$intersection$lat, lon = int1$intersection$lng, 
+                                      stringsAsFactors = FALSE),
+                           data.frame(1, street = getStreet(primary, primary.int2$intersection),
+                                      lat = int2$intersection$lat, lon = int2$intersection$lng, 
+                                      stringsAsFactors = FALSE))       
+       }
+       if (nrow(tmpBlock) == 2) {
+         minStreet <- which(tmpBlock$street == min(tmpBlock$street))
+         if (length(minStreet) > 1) {
+           tmpBlock <- cbind(tmpBlock[1, ], "NA", "NA", "NA", "NA")
+         } else{
+           tmpBlock <- cbind(tmpBlock[minStreet, ], tmpBlock[-minStreet, ])
+         }
+         names(tmpBlock) <- c("cross1.segment", "cross1.street", "cross1.lat", "cross1.lon",
+                              "cross2.segment", "cross2.street", "cross2.lat", "cross2.lon")
+         break
+       } 
+    }
+    if (is.null(tmpBlock$cross1.segment) | is.null(tmpBlock$cross2.segment)) {
+      err <<- c(err, tree)
+      tmpBlock <- NULL
       next
     }
-    fni.parms1 <- paste0("lat=", segments[segment, "lat1"], 
-                         "&lng=", segments[segment, "lon1"])
-    int1 <- fromJSON(file = paste0(fni.url, fni.parms1))
-    fni.parms2 <- paste0("lat=", segments[segment, "lat2"], 
-                         "&lng=", segments[segment, "lon2"])
-    int2 <- fromJSON(file = paste0(fni.url, fni.parms2))
-
-    if (segment == 1) {
-      primary.int1 <- int1
-      primary.int2 <- int2
-    }
-
-    if (int1$intersection$distance < 0.001) {
-      tmpBlock <- rbind(tmpBlock, 
-                        data.frame(segment, street = getStreet(primary, int1$intersection),
-                                   lat = int1$intersection$lat, lon = int1$intersection$lng, 
-                                   stringsAsFactors = FALSE))
-    } 
-    if (int2$intersection$distance < 0.001) {
-      tmpBlock <- rbind(tmpBlock, 
-                        data.frame(segment, street = getStreet(primary, int2$intersection),
-                                   lat = int2$intersection$lat, lon = int2$intersection$lng, 
-                                   stringsAsFactors = FALSE))
-    } 
-    if (nrow(tmpBlock) > 2) {
-      # error state with incomplete segments. Use primary segment for full block
-       tmpBlock <- rbind(data.frame(1, street = getStreet(primary, primary.int1$intersection),
-                                    lat = int1$intersection$lat, lon = int1$intersection$lng, 
-                                    stringsAsFactors = FALSE),
-                         data.frame(1, street = getStreet(primary, primary.int2$intersection),
-                                    lat = int1$intersection$lat, lon = int1$intersection$lng, 
-                                    stringsAsFactors = FALSE))       
-     }
-     if (nrow(tmpBlock) == 2) {
-       minStreet <- which(tmpBlock$street == min(tmpBlock$street))
-       if (length(minStreet) > 1) {
-         tmpBlock <- cbind(tmpBlock[1, ], NA, NA, NA, NA)
-       } else{
-         tmpBlock <- cbind(tmpBlock[minStreet, ], tmpBlock[-minStreet, ])
-       }
-       names(tmpBlock) <- c("cross1.segment", "cross1.street", "cross1.lat", "cross1.lon",
-                            "cross2.segment", "cross2.street", "cross2.lat", "cross2.lon")
-       break
-     } 
-  }
-  if (is.null(tmpBlock$cross1.segment) | is.null(tmpBlock$cross2.segment)) {
-    err <<- c(err, tree)
-    tmpBlock <- NULL
-    next
-  }
-  x <- inner_join(tmpBlock, blocks, 
-                  by = c("cross1.lat" = "cross1.lat", "cross1.lon" = "cross1.lon",
-                         "cross2.lat" = "cross2.lat", "cross2.lon" = "cross2.lon"))
-  if (nrow(x) > 0) {
-    # block exists
-    blocks[blocks$id == x$id, "count"] <- blocks[blocks$id == x$id, "count"] + 1
-    leftover[tree, "blockId"] <- blocks[blocks$id == x$id, "id"]
-  } else{
-    blocks <- rbind(blocks, 
-                    cbind(id = nrow(blocks) + 1, primary.street = primary, tmpBlock, count = 1))
-    leftover[tree, "blockId"] <- nrow(blocks)
-  }},
+    x <- inner_join(tmpBlock, blocks, 
+                    by = c("cross1.lat" = "cross1.lat", "cross1.lon" = "cross1.lon",
+                           "cross2.lat" = "cross2.lat", "cross2.lon" = "cross2.lon"))
+    if (nrow(x) > 0) {
+      # block exists
+      blocks[blocks$id == x$id, "count"] <- blocks[blocks$id == x$id, "count"] + 1
+      treeMap[tree, "blockId"] <- blocks[blocks$id == x$id, "id"]
+    } else{
+      blocks <- rbind(blocks, 
+                      cbind(id = nrow(blocks) + 1, primary.street = primary, tmpBlock, count = 1))
+      treeMap[tree, "blockId"] <- nrow(blocks)
+    }},
   error = function(e){
-    print("err")
+    print(paste(timestamp(quiet = T)), e)
     Sys.sleep(60 * 60)  # sleep for API limit
     tree <- tree - 1
   })
@@ -243,10 +242,10 @@ err <- readRDS("rds/err.64397.rds")
 length(err) 
 ```
 
-There are a lot of errors left over, but not too bad relative to the total number of trees mapped (`r paste0(round(length(err)/nrow(treeMap) * 100, 2), "%")`). The previous post introduced k-means clustering to group a block of trees together. The clustering method helps reduce the amount of manual labor, but the number of clusters has to be conservative, and clusters have to be verified. The starting number of clusters is obtained by dividing the number of errors by the median number of trees per block, resulting in `r ceiling(length(err)/median(blocks$count))` clusters. The idea is that each cluster will map to a block.
+There are a lot of errors left over, but not too bad relative to the total number of trees mapped (`r paste0(round(length(err)/nrow(treeMap) * 100, 2), "%")`). The previous post introduced k-means clustering to group a block of trees together. The clustering method helps reduce the amount of manual labor, but the number of clusters has to be conservative, and clusters have to be verified. The starting number of clusters is obtained by dividing the number of errors by the median number of trees per block, resulting in `r ceiling(length(err)/median(blocks$count))` clusters. The hope is that each cluster will map to a block.
 
 ```{r errors}
-map.manh <- get_map(location = "manhattan", zoom = 12, maptype = "toner-lines")
+map.manh <- get_map(location = "manhattan, new york", zoom = 12, maptype = "toner-lines")
 trees.err <- treeMap[err, ]
 set.seed(123)
 km <- kmeans(cbind(trees.err[, "lat"], trees.err[, "lon"]), 
@@ -287,15 +286,15 @@ ggmap(map.wall) +
    theme_nothing() 
 ```
 
-Doubling the clusters does the job, at least for the financial district. It's easier to combine multiple clusters together than to split a cluster into a sub-cluster, so this will be the clustering system going forward. 
+Doubling the clusters does the job, at least for the financial district. It's easier to combine multiple clusters together than to split a cluster into a sub-cluster, so this will be the clustering method going forward. 
 
 ```{r read corrections, include = FALSE} 
-blocks <- readRDS("rds/blocks.corrected.rds")
-treeMap <- readRDS("rds/treeMap.corrected.rds") 
+blocks <- readRDS("rds/blocks.corrected.partial.rds")
+treeMap <- readRDS("rds/treeMap.corrected.partial.rds") 
 trees.err <- readRDS("rds/trees.err.rds") 
 ```
 
-After [assigning](https://github.com/jwillage/Trees/blob/master/corrections_revised.R) all tree clusters to a block (including manually adding missing blocks), the blocks still require a little further cleanup. All "duplicate" entries (blocks with the same primary street and cross streets) are collapsed into a single entry with a new id. The trees assigned to the collapsed blocks will be assigned the new block ID value. 
+After [assigning](https://github.com/jwillage/Trees/blob/master/corrections_revised.R) all tree clusters to a block (including manually adding missing blocks), the blocks still require a little further cleanup. All "duplicate" entries (blocks with the same primary street and cross streets) are collapsed into a single entry with a new id. The trees assigned to the collapsed blocks are assigned the new block ID value. 
 
 ```{r collapse blocks}
 block.count <- nrow(blocks)
@@ -312,26 +311,16 @@ blocks <- inner_join(summary, blocks, by = c("agg"))
 This reduces the number of blocks from `r block.count` to `r nrow(blocks)`. Now they can be sorted by tree count.
 
 ```{r}
-head(blocks[order(blocks$trees, decreasing = TRUE), c(1:5)], 10)
+print(cbind("rank" = 1:25, head(blocks[order(blocks$trees, decreasing = TRUE), c(3:5, 2)], 25)),
+      row.names = FALSE)
 ```
 
-The Manhattan block with the highest number of trees is Riverside Dr between 116th St and 119th St, with `r head(blocks[order(blocks$trees, decreasing = TRUE),]$trees, 1)`. While interesting in it's own right, this doesn't take into account the distance of a block. For instance, this "block" along Riverside Dr is clearly 3 blocks long. To reconcile this issue, a slightly different question is asked: Which block has the highest trees-per-meter (TPM)? The TPM approach, as discussed in the [first article](), is applied.  
+The Manhattan block with the highest number of trees is Riverside Dr between 116th St and 119th St, with `r head(blocks[order(blocks$trees, decreasing = TRUE),]$trees, 1)` trees. While interesting in it's own right, this doesn't take into account the distance of a block. For instance, this `block` along Riverside Dr is technically a correct `block`; it runs from 116th to 119th uninterrupted by any intersections. But it's clearly the distance of 3 grid blocks. Also take into account that avenues are spaced further than streets. To reconcile this issue, a slightly different question should be asked: Which block has the highest density of trees? The trees-per-meter (TPM) approach, as discussed in the [first article](http://www.joewillage.com/blog/2016/3/31/analyzing-new-yorks-trees), is applied. This includes finding the distance of a block using the Haversine great-circle distance formula, then dividing the number of trees by that distance.  
 
 ```{r}
 deg2rad <- function(deg) return(deg * pi / 180)
 
 gcd <- function(long1, lat1, long2, lat2) {
-  # Computes the great-circle distance between two points using the haversine formula
-  #
-  # Args:
-  #   long1:  Longitude of first point in decimal degrees
-  #   lat2:   Latitude of first point in decimal degrees
-  #   long2:  Longitude of first point in decimal degrees
-  #   lat2:   Latitude of second point in decimal degrees
-  #
-  # Returns:
-  #   The distance in meters
-  
   long1 <- deg2rad(long1) 
   lat1 <- deg2rad(lat1)
   long2 <- deg2rad(long2) 
@@ -345,18 +334,14 @@ gcd <- function(long1, lat1, long2, lat2) {
 }
 ```
 
-Note the application of the Haversine formula assumes all blocks are straight lines from one endpoint to the other. This is generally the case. Other possible solutions could incorporate Google Maps or the segment distances returned from Geonames API. 
+Note the application of the Haversine formula assumes all blocks are straight lines from one endpoint to the other. This is generally the case, but, as discussed above, blocks are technically made up of multiple segments, which don't necessarily constitute a straight line. Other possible solutions could incorporate Google Maps distances or the segment distances returned from the Geonames API. 
 
-```{r}
-#remove?
-blocks$cross2.lon <- as.numeric(blocks$cross2.lon)
-blocks$cross2.lat <- as.numeric(blocks$cross2.lat)
-blocks$cross1.lon <- as.numeric(blocks$cross1.lon)
-blocks$cross1.lat <- as.numeric(blocks$cross1.lat)
 
+```{r include = FALSE}
+blocks <- readRDS("rds/blocks.corrected2.rds")
 ```
 
-```{r}
+```{r eval = FALSE}
 for (i in 1:nrow(blocks)) { 
   d <- gcd(blocks[i, "cross1.lon"], 
            blocks[i, "cross1.lat"], 
@@ -376,18 +361,16 @@ blocks[!complete.cases(blocks), "tpm"] <- median(blocks[complete.cases(blocks), 
 
 At this point, the question can be answered: which Manhattan block has the highest TPM?
 
-```{r, echo = FALSE}
-head(blocks[order(blocks$tpm, decreasing = TRUE),], 10)
+```{r}
+print(cbind("rank" = 1:25, head(blocks[order(blocks$tpm, decreasing = TRUE), c(3:5, 2, 11)], 25)),
+      row.names = FALSE)
 ```
 
-The highest tpm is the stretch on Broadway between W 73rd and W 74th St. What seems like an unlikely block to have the highest concentration of trees in Manhattan, actually hosts a mini-nursery through the median. In fact, most of Broadway running through the Upper West Side up to 168th St has these [Broadway Malls](). 
-
-<iframe src="https://www.google.com/maps/embed?pb=!1m0!3m2!1sen!2sus!4v1468101936630!6m8!1m7!1siPmm4WOzI14dbtK0cVWWhQ!2m2!1d40.77973292615857!2d-73.98180250994949!3f41.771814255830755!4f-3.8725104489190727!5f0.7820865974627469" width="800" height="600"
-frameborder="0" style="border:0" allowfullscreen></iframe>
+The highest TPM is the stretch on Broadway between W 73rd and W 74th St. What seems like an unlikely block to have the highest concentration of trees in Manhattan, actually hosts a mini-nursery through the median. In fact, most of Broadway running through the Upper West Side up to 168th St boasts these [Broadway Malls](). 
 
 <iframe src="https://www.google.com/maps/embed?pb=!1m0!3m2!1sen!2sus!4v1468104363746!6m8!1m7!1s-TUZoBt_3ZhIfBwWrO2nqg!2m2!1d40.78015513512755!2d-73.98145567196616!3f221.68876822150597!4f-8.008538271073448!5f0.7820865974627469" width="800" height="600" frameborder="0" style="border:0" allowfullscreen></iframe>
 
-The top 25 blocks: 
+The top 25 blocks mapped out: 
 
 ```{r top25}
 blocks$lat.avg <- NULL
@@ -402,41 +385,35 @@ for (i in 1:nrow(blocks)) {
 top25 <- as.data.frame(head(blocks[order(blocks$tpm, decreasing = TRUE), ], 25))
 
 ggmap(map.manh) + 
-   geom_point(data = top25, aes(x = lon.avg, y = lat.avg), size = 6, alpha = 0.5, color = "green") +
+   geom_point(data = top25, aes(x = lon.avg, y = lat.avg), size = 8, alpha = 0.8, color = "grey50") +
+   geom_point(data = top25, aes(x = lon.avg, y = lat.avg), size = 6, alpha = 0.8, color = "green") +
    theme_nothing() 
 ```
 
- Here is the tree density over all of Manhattan, by trees per meter. 
+18 of the 25 highest TPM blocks are on the Upper West Side, mostly along Broadway and  Riverside Dr. 5 blocks are on the East side of Manhattan, from 38th up to 144th St (Park Ave. malls exist similar to the Broadway Malls). 2 of the top 25 blocks are downtown in front of Goldman Sachs. 
 
-```{r hex, eval = F}
-ggmap(map.manh) + #1
-  coord_cartesian() +
-  geom_hex(data = blocks, aes(x = lon.avg, y = lat.avg,  tpm), bins = 30) +
-  theme_nothing()
-+
-ggmap(map.manh) + #2
-  coord_cartesian() +
-  geom_hex(data = treeMap, aes(x = lon, y = lat,  1), bins = 30) +
-  theme_nothing()
+Here is the tree density over all of Manhattan, colored by trees per meter. 
 
-ggmap(map.manh) + #3 same as 1
-  coord_cartesian() +
-#  geom_hex(data = blocks, aes(x = lon.avg, y = lat.avg,  fill =sum(count)), bins = 30) +
-  stat_binhex(data = blocks, aes(x = lon.avg, y = lat.avg, color = idx)) +
-  theme_nothing()
-
+```{r hex}
 ggmap(map.manh) +
   coord_cartesian() +
-  stat_summary_hex(data = blocks, aes(x = lon.avg, y = lat.avg, z = tpm), fun = mean) +
-  theme_nothing() +
-  scale_fill_gradient(low="lightgreen", high="darkgreen")
-
-ggmap(map.manh) +
-  coord_cartesian() +
-  stat_summary_hex(data = treeMap, aes(x = lon, y = lat,  z=1), fun = sum) +
-  theme_nothing() +
-  scale_fill_gradient(low="lightgreen", high="darkgreen")
+  stat_summary_hex(data = blocks, aes(x = lon.avg, y = lat.avg, z = tpm), fun = mean, bins = 40) +
+  theme(
+    axis.text = element_blank(), 
+    axis.title = element_blank(), 
+    panel.background = element_blank(),
+    panel.grid.major = element_blank(), 
+    panel.grid.minor = element_blank(), 
+    axis.ticks.length = unit(0, "cm"), 
+    panel.margin = unit(0, "lines"), 
+    plot.margin = unit(c(0, 0, 0, 0), "lines"),
+    legend.position = c(1,.5),
+    legend.justification = c(1, .5)
+  ) +
+  scale_fill_gradient(low="lightgreen", high="darkgreen", name = "Average\nTPM")
 ```
+
+The process isn't perfect, but the techniques here give a reasonable starting point for mapping points of interest to named street blocks. I also want to point out that working with NYC Open Data sets has been a great experience. I've actually been involved with this street tree data for a while, as I was a volun*treer* who helped count and record trees. I was really excited when I got the email announcing the Beta version of the NYC Street Tree Map, and was able to see the results of the physical work everyone involved put in. In June, [Beta NYC](http://betanyc.us/) held a TreesCount data jam - a hackathon entirely devoted to the street tree data set. Watching the evolution of this data from tablet input to API output has helped me appreciate the work that goes into an undertaking like this. I applaud the NYC Open Data effort, and hope the open data movement continues to grow.  
 
 
 [^1]: **New York City Street Tree Map Beta**  
@@ -446,9 +423,14 @@ ggmap(map.manh) +
   View details of a specific tree, including closest address:  
   https://tree-map.nycgovparks.org/tree/full/\<tree-id from points json\>  
   Browser-based map:  
-  https://tree-map.nycgovparks.org/ &nbsp;&nbsp;&nbsp;
+  https://tree-map.nycgovparks.org/  
+  Note: NYC Open Data recently added this data set to their webiste.  
+  https://data.cityofnewyork.us/Environment/2015-Street-Tree-Census-Tree-Data/uvpi-gqnh&nbsp;&nbsp;&nbsp;
   
 [^2]: **NYC Open Data**  
   Political and Administrative Boundaries, Borough Boundaries (Clipped to Shoreline)
   http://www1.nyc.gov/site/planning/data-maps/open-data/districts-download-metadata.page&nbsp;&nbsp;&nbsp;
-  
+
+[^3]:  **Geonames Find Nearby Streets (FNS) API, Find Nearest Intersection (FNI)**  
+  Browser-based map and documentation:  
+  http://www.geonames.org/maps/us-reverse-geocoder.html &nbsp;&nbsp;&nbsp;  
