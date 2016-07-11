@@ -17,7 +17,7 @@ knitr::opts_chunk$set(fig.width = 7, fig.height = 7, fig.path='Figs/',
                       warning = FALSE, message = FALSE, cache = TRUE)
 ```
 
-This is the third and final installment in a series discussing trees and geocoordinate accuracy in New York City. The [first article](http://www.joewillage.com/blog/2016/3/31/analyzing-new-yorks-trees) established a baseline and connected to the NYC Tree Map data source. The [second article](http://www.joewillage.com/blog/2016/4/10/achieving-accuracy-in-mapping-coordinates-to-street-blocks) focused on achieving a higher accuracy in mapping points to street blocks. This article brings the other two together, applying generic coordinate mapping to the full list of Manhattan street trees, in order to determine which block in the city has the most trees.    
+This is the third and final installment in a series discussing trees and geocoordinate accuracy in New York City. The [first article](http://www.joewillage.com/blog/2016/3/31/analyzing-new-yorks-trees) established a baseline and connected to the NYC Tree Map data source. The [second article](http://www.joewillage.com/blog/2016/4/10/achieving-accuracy-in-mapping-coordinates-to-street-blocks) focused on achieving a higher accuracy in mapping points to street blocks. This article brings the other two together, applying generic coordinate mapping to the full list of Manhattan street trees, in order to determine which block in the city has the most trees. The metric includes trees from both sides of the block as well as any trees in the median.     
 
 The first step is calling the Tree Map API[^1]. This data set contains all the *street trees* in New York. The API returns a rectangular polygon filled with points representing trees. Unfortunately, the island of Manhattan doesn't fit easily onto a rectangle. So an MBB covering Manhattan is defined, and all trees outside of that area are pruned.  
 
@@ -111,7 +111,7 @@ points.manh <- point.in.polygon(treeMap$lon, treeMap$lat,
 treeMap <- treeMap[points.manh > 0, ]
 ```
 
-Now that the correct points are collected, they need to be mapped to a street block. That requires simultaneously building a table of street blocks. The general concept is to loop through each Manhattan tree, using the following process. First, find out what street `segment` the tree's coordinates are on. Segments are two points that define a straight line, and blocks can be made up of multiple segments. So the next step is finding all the segments that make up the block. This is done by checking the distance between each segment end and it's nearest intersection[^3]. If the distance is almost 0, the segment end is marked as the end of the block. Repeat until the other block end is found, or all segments are exhausted (and enter an error state). Next, a check is performed to see if the street block already exists in the blocks table, or if it needs to be added. Finally, the tree is assigned the resulting block number. Repeat for all trees. See the [last post](http://www.joewillage.com/blog/2016/4/10/achieving-accuracy-in-mapping-coordinates-to-street-blocks) for more detailed explanations of the process.  
+Now that the correct points are collected, they need to be mapped to a street block. That requires simultaneously building a table of street blocks. The general concept is to loop through each Manhattan tree, using the following process. First, find out what street `segment` the tree's coordinates are on. Segments are two points that define a straight line, and blocks can be made up of multiple segments. So the next step is finding all the segments that make up the block. This is done by checking the distance between each segment end and its nearest intersection[^3]. If the distance is almost 0, the segment end is marked as the end of the block. Repeat until the other block end is found, or all segments are exhausted (and enter an error state). Next, a check is performed to see if the street block already exists in the blocks table, or if it needs to be added. Finally, the tree is assigned the resulting block number. Repeat for all trees. See the [last post](http://www.joewillage.com/blog/2016/4/10/achieving-accuracy-in-mapping-coordinates-to-street-blocks) for more detailed explanations of the process.  
 
 ```{r block table, eval = FALSE}
 user <- readLines("../../geonames.txt")
@@ -315,7 +315,7 @@ print(cbind("rank" = 1:25, head(blocks[order(blocks$trees, decreasing = TRUE), c
       row.names = FALSE)
 ```
 
-The Manhattan block with the highest number of trees is Riverside Dr between 116th St and 119th St, with `r head(blocks[order(blocks$trees, decreasing = TRUE),]$trees, 1)` trees. While interesting in it's own right, this doesn't take into account the distance of a block. For instance, this `block` along Riverside Dr is technically a correct `block`; it runs from 116th to 119th uninterrupted by any intersections. But it's clearly the distance of 3 grid blocks. Also take into account that avenues are spaced further than streets. To reconcile this issue, a slightly different question should be asked: Which block has the highest density of trees? The trees-per-meter (TPM) approach, as discussed in the [first article](http://www.joewillage.com/blog/2016/3/31/analyzing-new-yorks-trees), is applied. This includes finding the distance of a block using the Haversine great-circle distance formula, then dividing the number of trees by that distance.  
+The Manhattan block with the highest number of trees is Riverside Dr between 116th St and 119th St, with `r head(blocks[order(blocks$trees, decreasing = TRUE),]$trees, 1)` trees. While interesting in its own right, this doesn't take into account the distance of a block. For instance, this `block` along Riverside Dr is technically a correct `block`; it runs from 116th to 119th uninterrupted by any intersections. But it's clearly the distance of 3 grid blocks. Also take into account that avenues are spaced further than streets. To reconcile this issue, a slightly different question should be asked: Which block has the highest density of trees? The trees-per-meter (TPM) approach, as discussed in the [first article](http://www.joewillage.com/blog/2016/3/31/analyzing-new-yorks-trees), is applied. This includes finding the distance of a block using the Haversine great-circle distance formula, then dividing the number of trees by that distance.  
 
 ```{r}
 deg2rad <- function(deg) return(deg * pi / 180)
@@ -398,6 +398,7 @@ Here is the tree density over all of Manhattan, colored by trees per meter.
 ggmap(map.manh) +
   coord_cartesian() +
   stat_summary_hex(data = blocks, aes(x = lon.avg, y = lat.avg, z = tpm), fun = mean, bins = 40) +
+  ggtitle("Street Tree Density in Manhattan by Trees Per Meter") +
   theme(
     axis.text = element_blank(), 
     axis.title = element_blank(), 
@@ -408,7 +409,9 @@ ggmap(map.manh) +
     panel.margin = unit(0, "lines"), 
     plot.margin = unit(c(0, 0, 0, 0), "lines"),
     legend.position = c(1,.5),
-    legend.justification = c(1, .5)
+    legend.justification = c(1, .5),
+    plot.title = element_text(size = 20),
+    legend.key.height = unit(3, "cm")
   ) +
   scale_fill_gradient(low="lightgreen", high="darkgreen", name = "Average\nTPM")
 ```
