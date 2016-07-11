@@ -1,0 +1,339 @@
+---
+title: "Zooms"
+author: "Joe Willage"
+date: "May 18, 2016"
+output: 
+  html_document: 
+    keep_md: yes
+---
+
+```{r, include = FALSE}
+library(knitr)
+library(ggmap)
+library(dplyr)
+
+trees.err <- readRDS("rds/trees.err.RDS")
+means <- trees.err %>% group_by(cluster) %>% summarize(lat = mean(lat), lon = mean(lon))
+```
+
+```{r global_options, include = FALSE}
+knitr::opts_chunk$set(fig.width = 7, fig.height = 7, fig.path='Figs/', 
+                      warning = FALSE, message = FALSE, cache = TRUE)
+```
+
+
+```{r tbc}
+map.tbc <- get_map(location = "40.7197778,-74.0084906", zoom = 16, maptype = "toner-lines")
+ggmap(map.tbc) + 
+   geom_point(data = trees.err,
+              aes(x = lon, y = lat, color = cluster), alpha = 0.4, size = 8) +
+   geom_text(data = means, aes(x = lon, y = lat, label = cluster), size = 7, color = "red4", 
+             alpha = 0.8) +
+   theme_nothing() 
+```
+
+
+```{r w vill}
+map.x <- get_map(location = "40.729319,-74.0043346", zoom = 16, maptype = "toner-lines")
+ggmap(map.x) + 
+   geom_point(data = trees.err,
+              aes(x = lon, y = lat, color = cluster), alpha = 0.4, size = 8) +
+   geom_text(data = means, aes(x = lon, y = lat, label = cluster), size = 8, color = "red4", 
+             alpha = 0.8) +
+   theme_nothing()
+```
+
+```{r w vill 2}
+km <- kmeans(cbind(trees.err[trees.err$cluster == 16, "lat"], trees.err[trees.err$cluster ==16, "lon"]), 
+             centers = 3, nstart = 50)
+trees.err$cluster2 <- NULL
+trees.err[trees.err$cluster ==16, "cluster2"] <- as.factor(km$cluster)
+means <- trees.err %>% group_by(cluster) %>% summarize(lat = mean(lat), lon = mean(lon))
+means2 <- trees.err %>% group_by(cluster2) %>% summarize(lat = mean(lat), lon = mean(lon))
+map.x <- get_map(location = "40.730319,-74.0043346", zoom = 16, maptype = "toner-lines")
+ggmap(map.x) + 
+   geom_point(data = trees.err,
+              aes(x = lon, y = lat, color = cluster), alpha = 0.4, size = 8) +
+   geom_text(data = means, aes(x = lon, y = lat, label = cluster), size = 20, color = "red4", 
+             alpha = 0.8) +
+    geom_text(data = means2, aes(x = lon, y = lat, label = cluster2), size = 20, color = "blue4", 
+             alpha = 0.8) +
+   theme_nothing()
+```
+
+
+```{r holland}
+map.holland <- get_map(location = "40.7258421,-74.0088331", zoom = 17, maptype = "toner-lines")
+ggmap(map.holland) + 
+   geom_point(data = trees.err,
+              aes(x = lon, y = lat, color = cluster), alpha = 0.4, size = 8) +
+   geom_text(data = means, aes(x = lon, y = lat, label = cluster), size = 8, color = "red4", 
+             alpha = 0.8) +
+   theme_nothing()
+```
+
+```{r chelsea}
+map.x <- get_map(location = "40.7415998,-74.0037806", zoom = 16, maptype = "toner-lines")
+ggmap(map.x) + 
+   geom_point(data = trees.err,
+              aes(x = lon, y = lat, color = cluster), alpha = 0.4, size = 8) +
+   geom_text(data = means, aes(x = lon, y = lat, label = cluster), size = 20, color = rainbow(370), 
+             alpha = 0.8) +
+   theme_nothing()
+```
+
+```{r hudson yards}
+map.x <- get_map(location = "40.7512192,-74.0001704", zoom = 16, maptype = "toner-lines")
+ggmap(map.x) + 
+   geom_point(data = trees.err,
+              aes(x = lon, y = lat, color = cluster), alpha = 0.4, size = 8) +
+   geom_text(data = means, aes(x = lon, y = lat, label = cluster), size = 20, color = rainbow(370), 
+             alpha = 0.8) +
+   theme_nothing()
+```
+
+```{r boat basin}
+map.x <- get_map(location = "40.7837968,-73.9814432", zoom = 17, maptype = "toner-lines")
+d <- trees.err
+d<- d[!d$cluster %in% c(338, 123, 165),]
+means <- d %>% group_by(cluster) %>% summarize(lat = mean(lat), lon = mean(lon))
+ggmap(map.x) + 
+   geom_point(data = d,
+              aes(x = lon, y = lat, color = cluster), alpha = 0.4, size = 8) +
+   geom_text(data = means, aes(x = lon, y = lat, label = cluster), size = 20, color = rainbow(367), 
+             alpha = 0.8) +
+   theme_nothing()
+```
+
+
+```{r UWS}
+map.x <- get_map(location = "40.7904341,-73.9719176", zoom = 17, maptype = "toner-lines")
+d <- trees.err
+d <- d[!d$cluster %in% c(265, 26, 134, 227, 303, 226, 203, 190), ]
+means <- trees.err %>% group_by(cluster) %>% summarize(lat = mean(lat), lon = mean(lon))
+ggmap(map.x) + 
+   geom_point(data = trees.err,
+              aes(x = lon, y = lat, color = cluster), alpha = 0.4, size = 8) +
+   geom_text(data = means, aes(x = lon, y = lat, label = cluster), size = 4, color = "red4", 
+             alpha = 0.8) +
+   theme_nothing()
+```
+
+```{r central park w}
+map.x <- get_map(location = "40.8227769,-73.9517196", zoom = 16, maptype = "toner-lines")
+d <- trees.err
+d<- d[!d$cluster %in% c(79, 336), ]
+means <- d %>% group_by(cluster) %>% summarize(lat = mean(lat), lon = mean(lon))
+ggmap(map.x) + 
+   geom_point(data = d,
+              aes(x = lon, y = lat, color = cluster), alpha = 0.4, size = 8) +
+   geom_text(data = means, aes(x = lon, y = lat, label = cluster), size = 5, color = "red4", 
+             alpha = 0.8) +
+   theme_nothing()
+```
+
+```{r central park nw}
+map.x <- get_map(location = "40.8040861,-73.9681536", zoom = 17, maptype = "toner-lines")
+#d <- trees.err
+#d<- d[!d$cluster %in% c(79, 336),]
+means <- d %>% group_by(cluster) %>% summarize(lat = mean(lat), lon = mean(lon))
+ggmap(map.x) + 
+   geom_point(data = d,
+              aes(x = lon, y = lat, color = cluster), alpha = 0.4, size = 8) +
+   geom_text(data = means, aes(x = lon, y = lat, label = cluster), size = 5, color = "red4", 
+             alpha = 0.8) +
+   theme_nothing()
+```
+
+```{r columbia}
+map.x <- get_map(location = "40.8097175,-73.9628462", zoom = 17, maptype = "toner-lines")
+#d <- trees.err
+#d<- d[!d$cluster %in% c(79, 336),]
+means <- d %>% group_by(cluster) %>% summarize(lat = mean(lat), lon = mean(lon))
+ggmap(map.x) + 
+   geom_point(data = trees.err,
+              aes(x = lon, y = lat, color = cluster), alpha = 0.4, size = 8) +
+   geom_text(data = means, aes(x = lon, y = lat, label = cluster), size = 5, color = "red4", 
+             alpha = 0.8) +
+   theme_nothing()
+```
+
+```{r manhattanville}
+map.x <- get_map(location = "40.8130144,-73.9587264", zoom = 17, maptype = "toner-lines")
+#d <- trees.err
+#d<- d[!d$cluster %in% c(79, 336),]
+means <- d %>% group_by(cluster) %>% summarize(lat = mean(lat), lon = mean(lon))
+ggmap(map.x) + 
+   geom_point(data = trees.err,
+              aes(x = lon, y = lat, color = cluster), alpha = 0.4, size = 8) +
+   geom_text(data = means, aes(x = lon, y = lat, label = cluster), size = 5, color = "red4", 
+             alpha = 0.8) +
+   theme_nothing()
+```
+
+```{r city college}
+map.x <- get_map(location = "40.8190853,-73.9516904", zoom = 16, maptype = "toner-lines")
+#d <- trees.err
+#d<- d[!d$cluster %in% c(79, 336),]
+means <- d %>% group_by(cluster) %>% summarize(lat = mean(lat), lon = mean(lon))
+ggmap(map.x) + 
+   geom_point(data = trees.err,
+              aes(x = lon, y = lat, color = cluster), alpha = 0.4, size = 8) +
+   geom_text(data = means, aes(x = lon, y = lat, label = cluster), size = 5, color = "red4", 
+             alpha = 0.8) +
+   theme_nothing()
+```
+
+```{r inwood}
+map.x <- get_map(location = "40.8643326,-73.9272553", zoom = 15, maptype = "toner-lines")
+#d <- trees.err
+#d<- d[!d$cluster %in% c(79, 336),]
+#means <- d %>% group_by(cluster) %>% summarize(lat = mean(lat), lon = mean(lon))
+ggmap(map.x) + 
+   geom_point(data = trees.err,
+              aes(x = lon, y = lat, color = cluster), alpha = 0.4, size = 8) +
+   geom_text(data = means, aes(x = lon, y = lat, label = cluster), size = 5, color = "red4", 
+             alpha = 0.8) +
+   theme_nothing()
+```
+
+
+```{r ft tryon}
+map.x <- get_map(location = "40.860216,-73.9304092", zoom = 17, maptype = "toner-lines")
+#d <- trees.err
+#d<- d[!d$cluster %in% c(79, 336),]
+#means <- d %>% group_by(cluster) %>% summarize(lat = mean(lat), lon = mean(lon))
+ggmap(map.x) + 
+   geom_point(data = trees.err,
+              aes(x = lon, y = lat, color = cluster), alpha = 0.4, size = 8) +
+   geom_text(data = means, aes(x = lon, y = lat, label = cluster), size = 5, color = "red4", 
+             alpha = 0.8) +
+   theme_nothing()
+```
+
+```{r yeshiva}
+map.x <- get_map(location = "40.8488306,-73.9317689", zoom = 17, maptype = "toner-lines")
+ggmap(map.x) + 
+   geom_point(data = trees.err,
+              aes(x = lon, y = lat, color = cluster), alpha = 0.4, size = 8) +
+   geom_text(data = means, aes(x = lon, y = lat, label = cluster), size = 5, color = "red4", 
+             alpha = 0.8) +
+   theme_nothing()
+```
+
+```{r sugar hill}
+map.x <- get_map(location = "40.8278474,-73.9419416", zoom = 17, maptype = "toner-lines")
+ggmap(map.x) + 
+   geom_point(data = trees.err,
+              aes(x = lon, y = lat, color = cluster), alpha = 0.4, size = 8) +
+   geom_text(data = means, aes(x = lon, y = lat, label = cluster), size = 5, color = "red4", 
+             alpha = 0.8) +
+   theme_nothing()
+```
+
+
+```{r madison ave brg}
+map.x <- get_map(location = "40.8150564,-73.937090", zoom = 17, maptype = "toner-lines")
+ggmap(map.x) + 
+   geom_point(data = trees.err,
+              aes(x = lon, y = lat, color = cluster), alpha = 0.4, size = 8) +
+   geom_text(data = means, aes(x = lon, y = lat, label = cluster), size = 5, color = "red4", 
+             alpha = 0.8) +
+   theme_nothing()
+```
+
+
+```{r crack is whack playground}
+map.x <- get_map(location = "40.8032072,-73.9326803", zoom = 17, maptype = "toner-lines")
+ggmap(map.x) + 
+   geom_point(data = trees.err,
+              aes(x = lon, y = lat, color = cluster), alpha = 0.4, size = 8) +
+   geom_text(data = means, aes(x = lon, y = lat, label = cluster), size = 5, color = "red4", 
+             alpha = 0.8) +
+   theme_nothing()
+```
+
+
+```{r central park north}
+map.x <- get_map(location = "40.8004201,-73.9482805", zoom = 17, maptype = "toner-lines")
+ggmap(map.x) + 
+   geom_point(data = trees.err,
+              aes(x = lon, y = lat, color = cluster), alpha = 0.4, size = 8) +
+   geom_text(data = means, aes(x = lon, y = lat, label = cluster), size = 3, color = "red4", 
+             alpha = 0.8) +
+   theme_nothing()
+```
+
+
+
+```{r e harlem}
+map.x <- get_map(location = "40.7948233,-73.93585747", zoom = 17, maptype = "toner-lines")
+ggmap(map.x) + 
+   geom_point(data = trees.err,
+              aes(x = lon, y = lat, color = cluster), alpha = 0.4, size = 8) +
+   geom_text(data = means, aes(x = lon, y = lat, label = cluster), size = 3, color = "red4", 
+             alpha = 0.8) +
+   theme_nothing()
+```
+
+
+```{r gracie mansion}
+map.x <- get_map(location = "40.7781067,-73.9478898", zoom = 16, maptype = "toner-lines")
+ggmap(map.x) + 
+  geom_text(data = means, aes(x = lon, y = lat, label = cluster), size = 6, color = rainbow(368), 
+             alpha = 0.6) +
+   theme_nothing()
+```
+
+
+```{r john jay park}
+map.x <- get_map(location = "40.7671719,-73.9528957", zoom = 17, maptype = "toner-lines")
+ggmap(map.x) + 
+   geom_point(data = trees.err,
+              aes(x = lon, y = lat, color = cluster), alpha = 0.4, size = 8) +
+   geom_text(data = means, aes(x = lon, y = lat, label = cluster), size = 4, color = "red4", 
+             alpha = 0.8) +
+   theme_nothing()
+```
+
+
+```{r queensboro bridge}
+map.x <- get_map(location = "40.7603703,-73.9632232", zoom = 17, maptype = "toner-lines")
+ggmap(map.x) + 
+   geom_text(data = means, aes(x = lon, y = lat, label = cluster), size = 5, color = rainbow(368), 
+             alpha = 0.8) +
+   theme_nothing()
+```
+
+
+```{r peter cooper village}
+map.x <- get_map(location = "40.7351361,-73.9781837", zoom = 17, maptype = "toner-lines")
+ggmap(map.x) + 
+   geom_point(data = trees.err,
+              aes(x = lon, y = lat, color = cluster), alpha = 0.4, size = 8) +
+   geom_text(data = means, aes(x = lon, y = lat, label = cluster), size = 4, color = "red4", 
+             alpha = 0.8) +
+   theme_nothing()
+```
+
+
+```{r les}
+map.x <- get_map(location = "40.7134994,-73.9838977", zoom = 16, maptype = "toner-lines")
+ggmap(map.x) + 
+   geom_text(data = means, aes(x = lon, y = lat, label = cluster), size = 6, color = rainbow(368), 
+             alpha = 0.8) +
+   theme_nothing()
+```
+
+```{r brooklyn bridge}
+map.x <- get_map(location = "40.7112048,-74.005213", zoom = 17, maptype = "toner-lines")
+ggmap(map.x) + 
+  # geom_point(data = trees.err,
+  #            aes(x = lon, y = lat, color = cluster), alpha = 0.4, size = 8) +
+   geom_text(data = means, aes(x = lon, y = lat, label = cluster), size = 6, color = rainbow(368), 
+             alpha = 0.8) +
+   theme_nothing()
+```
+
+
+

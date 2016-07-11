@@ -11,6 +11,5 @@ rmd/*/*.web.md
 process.png
 geonames.txt
 zooms_cache/
-*zooms.Rmd
 TreesCount Data Jam/
 .httr-oauth
