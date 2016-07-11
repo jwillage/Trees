@@ -80,7 +80,7 @@ ggplot(data = df.manh, aes(x = lon, y = lat)) +
   scale_x_continuous(limits = c(-74.08, -73.85))
 ```
 
-![](Figs/draw Manhattan-1.png)
+![](Figs/draw-manhattan-1.png)
 
 This works pretty well, except for the giant line down the middle of the city causing half of Manhattan to not exist.  
 
@@ -110,7 +110,7 @@ g <- ggplot(data = df.manh.subset, aes(x = lon, y = lat, num = num)) +
 g
 ```
 
-![](Figs/manhattan subset-1.png)
+![](Figs/manhattan-subset-1.png)
 
 Better.  
 
@@ -286,7 +286,7 @@ ggmap(map.wall) +
    theme_nothing() 
 ```
 
-![](Figs/wall street errors-1.png)
+![](Figs/wall-street-errors-1.png)
 
 Unfortunately this clustering doesn't do a good enough job; clusters are comprised of multiple streets, especially cluster 62. The next attempt doubles the number of clusters. 
 
@@ -305,7 +305,7 @@ ggmap(map.wall) +
    theme_nothing() 
 ```
 
-![](Figs/wall street revised-1.png)
+![](Figs/wall-street-revised-1.png)
 
 Doubling the clusters does the job, at least for the financial district. It's easier to combine multiple clusters together than to split a cluster into a sub-cluster, so this will be the clustering method going forward. 
 

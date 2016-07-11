@@ -65,7 +65,7 @@ head(treeMap)
 
 Next, the dataframe is subset to just trees in Manhattan. The first step here is to retrieve a shape file describing Manhattan[^2].     
 
-```{r draw Manhattan}
+```{r draw-manhattan}
 shapes <- fromJSON(file = paste0("http://services5.arcgis.com/GfwWNkhOj9bNBqoJ/arcgis/rest/",
                                  "services/nybb/FeatureServer/0/query?where=1=1&outFields=*&",
                                  "outSR=4326&f=geojson"))
@@ -94,7 +94,7 @@ g
 
 The area of interest is the main island of Manhattan. It looks like that's the polygon described by the bright red through purple points, starting and ending at Inwood. Using the legend, that appears to be about points 1100 and up (fine-tuned to this number with trial and error). All the points below 1100 are removed. The weird island floating up by the Bronx should be removed as well (points > 6130). 
 
-```{r manhattan subset}
+```{r manhattan-subset}
 df.manh.subset <- subset(df.manh, num > 1100 & num < 6130)
 g <- ggplot(data = df.manh.subset, aes(x = lon, y = lat, num = num)) +
       geom_polygon() + 
@@ -259,7 +259,7 @@ ggmap(map.manh) +
 
 Zooming in on one neighborhood...  
 
-```{r wall street errors}
+```{r wall-street-errors}
 map.wall <- get_map(location = "40.705873, -74.013200", zoom = 16, maptype = "toner-lines")
 means <- trees.err %>% group_by(cluster) %>% summarize(lat = mean(lat), lon = mean(lon))
 ggmap(map.wall) + 
@@ -272,7 +272,7 @@ ggmap(map.wall) +
 
 Unfortunately this clustering doesn't do a good enough job; clusters are comprised of multiple streets, especially cluster 62. The next attempt doubles the number of clusters. 
 
-```{r wall street revised}
+```{r wall-street-revised}
 set.seed(123)
 km <- kmeans(cbind(trees.err[, "lat"], trees.err[, "lon"]), 
              centers = ceiling(length(err)/median(blocks$count)) * 2, nstart = 50)
