@@ -445,7 +445,7 @@ print(cbind("rank" = 1:25, head(blocks[order(blocks$tpm, decreasing = TRUE), c(3
 ##    25       Broadway         W 149th St    W 150th St    23 0.2907425
 ```
 
-The highest TPM is the stretch on Broadway between W 73rd and W 74th St. What seems like an unlikely block to have the highest concentration of trees in Manhattan, actually hosts a mini-nursery through the median. In fact, most of Broadway running through the Upper West Side up to 168th St boasts these [Broadway Malls](). 
+The highest TPM is the stretch on Broadway between W 73rd and W 74th St. What seems like an unlikely block for Manhattan's highest concentration of street trees actually hosts a mini-nursery through the median. In fact, most of Broadway running through the Upper West Side up to 168th St boasts these [Broadway Malls](). 
 
 <iframe src="https://www.google.com/maps/embed?pb=!1m0!3m2!1sen!2sus!4v1468104363746!6m8!1m7!1s-TUZoBt_3ZhIfBwWrO2nqg!2m2!1d40.78015513512755!2d-73.98145567196616!3f221.68876822150597!4f-8.008538271073448!5f0.7820865974627469" width="800" height="600" frameborder="0" style="border:0" allowfullscreen></iframe>
 
@@ -494,7 +494,7 @@ ggmap(map.manh) +
     legend.position = c(1,.5),
     legend.justification = c(1, .5),
     plot.title = element_text(size = 20),
-    legend.key.height = unit(3, "cm")
+    legend.key.height = unit(2, "cm")
   ) +
   scale_fill_gradient(low="lightgreen", high="darkgreen", name = "Average\nTPM")
 ```
